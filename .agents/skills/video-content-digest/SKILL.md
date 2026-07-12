@@ -24,8 +24,8 @@ Prefer factual extraction over creative invention. The generated writing can be 
    - The required bootstrap prerequisite is Python 3.10 or newer. If Python is missing, explain that the user must install it from the official Python distribution before continuing.
    - The checker is read-only unless `--install` is explicitly provided after user confirmation.
    - Python packages are installed into a skill-specific runtime: project-level skills use the project root, global skills use the user data directory. Never install into the system Python or the skill directory.
-   - Use `light` for the smallest local setup with faster-whisper.
    - Use `chinese` (the default transcription backend) for Mandarin-first content with FunASR.
+   - Use `light` for the smallest local setup with faster-whisper.
    - Use `--install` only when the user explicitly agrees to install missing Python dependencies.
    - `ffmpeg` is checked but never installed or uninstalled by this skill. Show the platform-specific package-manager commands instead.
    - This skill does not automatically download FunASR model files; provide local model directories explicitly.
@@ -72,8 +72,8 @@ The bootstrap Python must be 3.10 or newer. The skill does not install Python it
 Check dependencies without changing the environment:
 
 ```bash
-python scripts/check_env.py --mode light
 python scripts/check_env.py --mode chinese
+python scripts/check_env.py --mode light
 ```
 
 After the user explicitly confirms the reported dependencies and install location, install them into the managed runtime:

@@ -44,15 +44,20 @@ def parse_timed_blocks(content: str) -> list[dict]:
         end = clean_time(match.group("end"))
         i += 1
         text_lines: list[str] = []
-        while i < len(lines) and lines[i].strip():
-            if not lines[i].strip().isdigit():
-                text_lines.append(lines[i])
+        while i < len(lines):
+            current = lines[i].strip()
+            if not current:
+                i += 1
+                break
+            next_is_timestamp = i + 1 < len(lines) and TIME_RE.search(lines[i + 1])
+            if TIME_RE.search(lines[i]) or (current.isdigit() and next_is_timestamp):
+                break
+            text_lines.append(lines[i])
             i += 1
 
         text = clean_text(text_lines)
         if text:
             segments.append({"start": start, "end": end, "text": text})
-        i += 1
     return segments
 
 

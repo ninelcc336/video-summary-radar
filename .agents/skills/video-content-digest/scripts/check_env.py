@@ -34,6 +34,7 @@ MODE_ALIASES = {
     "api": "light",
     "local": "chinese",
 }
+DEFAULT_MODE = "chinese"
 
 SYSTEM_TOOLS = {
     "ffmpeg": {
@@ -140,15 +141,7 @@ def package_status(package: str, module: str, executable: Path | str | None = No
             package_version = None
         return PackageStatus(package, module, spec is not None, location, package_version)
 
-    code = (
-        "import importlib.metadata as m, importlib.util as u, json, sys; "
-        f"module = {module!r}; package = {package!r}; spec = u.find_spec(module); "
-        "location = (spec.origin or (next(iter(spec.submodule_search_locations), None) "
-        "if spec and spec.submodule_search_locations else None)) if spec else None; "
-        "version = None; "
-        "\ntry: version = m.version(package)\nexcept Exception: pass; "
-        "print(json.dumps({'installed': spec is not None, 'location': location, 'version': version}))"
-    )
+    code = runtime_package_probe_code(package, module)
     if not python.exists():
         return PackageStatus(package, module, False, None, None)
     result = subprocess.run([str(python), "-c", code], check=False, capture_output=True, text=True)
@@ -159,6 +152,24 @@ def package_status(package: str, module: str, executable: Path | str | None = No
     except json.JSONDecodeError:
         data = {"installed": False, "location": None, "version": None}
     return PackageStatus(package, module, bool(data["installed"]), data.get("location"), data.get("version"))
+
+
+def runtime_package_probe_code(package: str, module: str) -> str:
+    """Build the probe executed inside the managed runtime Python."""
+    return (
+        "import importlib.metadata as m, importlib.util as u, json\n"
+        f"module = {module!r}\n"
+        f"package = {package!r}\n"
+        "spec = u.find_spec(module)\n"
+        "location = (spec.origin or (next(iter(spec.submodule_search_locations), None) "
+        "if spec and spec.submodule_search_locations else None)) if spec else None\n"
+        "version = None\n"
+        "try:\n"
+        "    version = m.version(package)\n"
+        "except Exception:\n"
+        "    pass\n"
+        "print(json.dumps({'installed': spec is not None, 'location': location, 'version': version}))\n"
+    )
 
 
 def command_status(command: str) -> dict:
@@ -393,7 +404,7 @@ def main() -> int:
     parser.add_argument(
         "--mode",
         choices=["light", "chinese", "all", "api", "local"],
-        default="light",
+        default=DEFAULT_MODE,
         help="Dependency set to check; api/local are backward-compatible aliases",
     )
     parser.add_argument("--install", action="store_true", help="Install missing Python packages with pip")

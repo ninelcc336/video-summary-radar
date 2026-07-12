@@ -1,4 +1,6 @@
 import sys
+import json
+import subprocess
 from pathlib import Path
 
 
@@ -28,6 +30,19 @@ def test_chinese_dependencies_use_funasr():
 def test_legacy_modes_are_supported():
     assert check_env.normalize_mode("api") == "light"
     assert check_env.normalize_mode("local") == "chinese"
+
+
+def test_default_dependency_mode_is_chinese():
+    assert check_env.DEFAULT_MODE == "chinese"
+
+
+def test_runtime_probe_outputs_json_for_installed_package():
+    code = check_env.runtime_package_probe_code("pytest", "pytest")
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert result.returncode == 0
+    report = json.loads(result.stdout)
+    assert report["installed"] is True
+    assert report["version"]
 
 
 def test_default_home_supports_windows_and_macos():
