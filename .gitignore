@@ -1,0 +1,11 @@
+.cache
+.venv
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+
+# Local model files and generated run outputs
+models/
+outputs/

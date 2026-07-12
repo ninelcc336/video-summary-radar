@@ -1,0 +1,27 @@
+import subprocess
+import sys
+from pathlib import Path
+
+
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "transcribe.py"
+
+
+def test_help_lists_backends():
+    result = subprocess.run([sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True)
+    assert result.returncode == 0
+    assert "light" in result.stdout
+    assert "chinese" in result.stdout
+    assert "--asr-model" in result.stdout
+
+
+def test_chinese_without_model_fails_without_downloading(tmp_path):
+    audio = tmp_path / "audio.wav"
+    audio.write_bytes(b"fake")
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), str(audio), "--backend", "chinese", "--output", str(tmp_path / "out.json")],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "--asr-model" in result.stderr
+
