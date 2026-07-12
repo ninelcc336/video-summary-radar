@@ -57,7 +57,7 @@ def _transcribe_faster_whisper(audio_path: Path, model_name: str, language: str 
     try:
         from faster_whisper import WhisperModel
     except ImportError as exc:
-        raise RuntimeError("请安装 faster-whisper：python -m pip install faster-whisper") from exc
+        raise RuntimeError("缺少 faster-whisper。请先运行 scripts/check_env.py --mode light --install。") from exc
 
     model = WhisperModel(model_name, device="auto", compute_type="auto")
     segments, info = model.transcribe(str(audio_path), language=language, vad_filter=True)
@@ -105,7 +105,7 @@ def _transcribe_funasr(
         from funasr import AutoModel
         import torch
     except ImportError as exc:
-        raise RuntimeError("请安装 FunASR 及 PyTorch：python -m pip install funasr torch torchaudio") from exc
+        raise RuntimeError("缺少 FunASR 或 PyTorch。请先运行 scripts/check_env.py --mode chinese --install。") from exc
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     kwargs = {"model": asr_path, "device": device, "disable_update": True}

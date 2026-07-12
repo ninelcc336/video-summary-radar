@@ -39,6 +39,16 @@ yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" 
 - The current lightweight Chinese setup uses `models/SenseVoiceSmall` with `models/FSMN-VAD`; it does not include a separate punctuation model.
 - Record the selected backend and model source in the final content package.
 
+## Dependency setup
+
+- Project-level skills use `<project-root>/.video-content-digest/`.
+- Global skills use `%LOCALAPPDATA%\VideoSummaryRadar\video-content-digest\` on Windows or `~/Library/Application Support/VideoSummaryRadar/video-content-digest/` on macOS.
+- Override scope with `VIDEO_DIGEST_SCOPE=project` or `VIDEO_DIGEST_SCOPE=global`.
+- Override the complete runtime root with `VIDEO_DIGEST_HOME`.
+- Python must be 3.10 or newer. The skill reports this prerequisite but does not install Python.
+- Check `ffmpeg` with `where.exe ffmpeg` on Windows or `which ffmpeg` on macOS. Install it manually with `winget install Gyan.FFmpeg` or `brew install ffmpeg`.
+- The skill never downloads FunASR model files automatically.
+
 ## Privacy and Access
 
 - Do not bypass private, paywalled, login-only, or restricted content.
