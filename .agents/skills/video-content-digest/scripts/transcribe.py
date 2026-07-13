@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Transcribe audio with the light or Chinese-first backend."""
+"""Transcribe audio with the FunASR Chinese backend only."""
 
 from __future__ import annotations
 
@@ -20,29 +20,22 @@ def to_markdown(segments: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def transcribe(audio_path: Path, model_name: str, language: str | None) -> list[dict]:
-    """Backward-compatible faster-whisper entry point."""
-    return transcribe_audio(audio_path, "light", model_name, language, None, None, None)
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("audio", help="Audio file path")
     parser.add_argument("--output", required=True, help="Output file path")
     parser.add_argument("--format", choices=["json", "md"], default="json")
-    parser.add_argument("--backend", choices=["light", "chinese"], default="chinese")
-    parser.add_argument("--model", default="small", help="faster-whisper model name for light backend")
-    parser.add_argument("--language", default=None, help="Optional language code, e.g. zh or en")
-    parser.add_argument("--asr-model", default=None, help="Local FunASR ASR model directory")
-    parser.add_argument("--vad-model", default=None, help="Optional local FunASR FSMN-VAD model directory")
-    parser.add_argument("--punc-model", default=None, help="Optional local FunASR punctuation model directory")
+    parser.add_argument("--backend", choices=["chinese"], default="chinese")
+    parser.add_argument("--language", default="zh", help="Optional language code")
+    parser.add_argument("--asr-model", default=None, help="FunASR ASR 模型目录")
+    parser.add_argument("--vad-model", default=None, help="可选的 FunASR FSMN-VAD 模型目录")
+    parser.add_argument("--punc-model", default=None, help="可选的 FunASR 标点模型目录")
     args = parser.parse_args()
 
     audio_path = Path(args.audio).expanduser().resolve()
     segments = transcribe_audio(
         audio_path,
         args.backend,
-        args.model,
         args.language,
         args.asr_model,
         args.vad_model,

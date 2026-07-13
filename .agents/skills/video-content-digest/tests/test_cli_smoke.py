@@ -6,12 +6,14 @@ from pathlib import Path
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "transcribe.py"
 
 
-def test_help_lists_backends():
+def test_help_lists_only_chinese_backend():
     result = subprocess.run([sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True)
     assert result.returncode == 0
-    assert "light" in result.stdout
     assert "chinese" in result.stdout
+    for obsolete in ("light", "all", "api", "local", "faster-whisper"):
+        assert obsolete not in result.stdout
     assert "--asr-model" in result.stdout
+    assert "--model" not in result.stdout
 
 
 def test_chinese_without_model_fails_without_downloading(tmp_path):
@@ -23,5 +25,4 @@ def test_chinese_without_model_fails_without_downloading(tmp_path):
         text=True,
     )
     assert result.returncode != 0
-    assert "--asr-model" in result.stderr
-
+    assert "FunASR 模型路径不存在" in result.stderr

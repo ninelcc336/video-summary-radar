@@ -14,25 +14,16 @@ import sysconfig
 from dataclasses import dataclass
 from pathlib import Path
 
-from runtime_paths import RuntimePaths, platform_key, runtime_paths
+from runtime_paths import RuntimePaths, model_paths, platform_key, runtime_paths
 
 
 PYTHON_PACKAGES = {
-    "light": {
-        "yt-dlp": "yt_dlp",
-        "faster-whisper": "faster_whisper",
-    },
     "chinese": {
         "yt-dlp": "yt_dlp",
         "funasr": "funasr",
         "torch": "torch",
         "torchaudio": "torchaudio",
     },
-}
-
-MODE_ALIASES = {
-    "api": "light",
-    "local": "chinese",
 }
 DEFAULT_MODE = "chinese"
 
@@ -182,17 +173,10 @@ def command_status(command: str) -> dict:
 
 
 def selected_packages(mode: str) -> dict[str, str]:
-    mode = MODE_ALIASES.get(mode, mode)
-    if mode == "all":
-        packages: dict[str, str] = {}
-        for group in PYTHON_PACKAGES.values():
-            packages.update(group)
-        return packages
-    return PYTHON_PACKAGES[mode]
-
-
-def normalize_mode(mode: str) -> str:
-    return MODE_ALIASES.get(mode, mode)
+    try:
+        return PYTHON_PACKAGES[mode]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported mode: {mode}. Only chinese is supported.") from exc
 
 
 def ensure_runtime(paths: RuntimePaths) -> None:
@@ -223,14 +207,15 @@ def run_pip_install_into_runtime(packages: list[str], paths: RuntimePaths) -> No
 
 
 def model_report(mode: str, paths: RuntimePaths) -> dict:
-    required = mode in {"chinese", "all"}
-    asr = paths.models / "SenseVoiceSmall"
-    vad = paths.models / "FSMN-VAD"
+    required = mode == "chinese"
+    models = model_paths(paths)
+    asr = models["asr"]
+    vad = models["vad"]
     return {
         "base_dir": str(paths.models),
         "asr": {"path": str(asr), "required": required, "exists": asr.is_dir()},
         "vad": {"path": str(vad), "required": False, "exists": vad.is_dir()},
-        "punc": {"path": str(paths.models / "PUNC"), "required": False, "exists": (paths.models / "PUNC").is_dir()},
+        "punc": {"path": str(models["punc"]), "required": False, "exists": models["punc"].is_dir()},
         "note": "FunASR 模型不会由此脚本自动下载。" if required else None,
     }
 
@@ -359,7 +344,6 @@ def render_text(report: dict) -> str:
 
 
 def build_report(mode: str, install: bool) -> dict:
-    mode = normalize_mode(mode)
     packages = selected_packages(mode)
     paths = runtime_paths()
     before = [package_status(package, module, paths.runtime_python) for package, module in packages.items()]
@@ -403,9 +387,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=["light", "chinese", "all", "api", "local"],
+        choices=["chinese"],
         default=DEFAULT_MODE,
-        help="Dependency set to check; api/local are backward-compatible aliases",
+        help="Dependency set to check",
     )
     parser.add_argument("--install", action="store_true", help="Install missing Python packages with pip")
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON")
@@ -417,7 +401,7 @@ def main() -> int:
     else:
         print(render_text(report))
 
-    model_missing = report["mode"] in {"chinese", "all"} and not report["models"]["asr"]["exists"]
+    model_missing = report["mode"] == "chinese" and not report["models"]["asr"]["exists"]
     return 1 if report["missing_python_packages"] or not report["python_prerequisite"]["installed"] or model_missing else 0
 
 

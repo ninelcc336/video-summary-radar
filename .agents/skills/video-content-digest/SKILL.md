@@ -1,6 +1,6 @@
 ---
 name: video-content-digest
-description: Convert YouTube, Bilibili, Douyin/TikTok-style short video links, generic video URLs, or local video file paths into Chinese content packages. Use this skill whenever the user provides a video link or local video path and asks for video summaries, key points, timestamped timelines, quotes, transcripts, WeChat public account articles, Xiaohongshu posts, content repurposing, video notes, or social media copy based on video content.
+description: Convert YouTube, Bilibili, Douyin/TikTok-style short video links, generic video URLs, or local video file paths into Chinese content packages. Use this skill whenever the user provides a video link or local video path and asks for video summaries, key points, timestamped timelines, quotes, transcripts, WeChat public account drafts, Xiaohongshu drafts, content repurposing, video notes, content breakdowns, or social media copy based on video content.
 ---
 
 # Video Content Digest
@@ -11,144 +11,119 @@ Turn one video input into a structured Chinese content package:
 
 - 视频摘要
 - 核心观点
-- 时间轴
+- 内容拆解
+- 时间线
 - 金句
-- 公众号文章
-- 小红书文案
+- 公众号初稿
+- 小红书初稿
 
-Prefer factual extraction over creative invention. The generated writing can be polished, but claims must come from the video transcript, captions, title, description, or user-provided context.
+Prefer factual extraction over creative invention. Polished writing is allowed, but claims must come from the video transcript, captions, title, description, or user-provided context.
 
 ## Workflow
 
-1. Check dependencies with `scripts/check_env.py`.
-   - The required bootstrap prerequisite is Python 3.10 or newer. If Python is missing, explain that the user must install it from the official Python distribution before continuing.
+1. Check dependencies with `scripts/check_env.py --mode chinese`.
+   - The bootstrap prerequisite is Python 3.10 or newer. If Python is missing, explain that the user must install it from the official Python distribution before continuing.
    - The checker is read-only unless `--install` is explicitly provided after user confirmation.
-   - Python packages are installed into a skill-specific runtime: project-level skills use the project root, global skills use the user data directory. Never install into the system Python or the skill directory.
-   - Use `chinese` (the default transcription backend) for Mandarin-first content with FunASR.
-   - Use `light` for the smallest local setup with faster-whisper.
-   - Use `--install` only when the user explicitly agrees to install missing Python dependencies.
-   - `ffmpeg` is checked but never installed or uninstalled by this skill. Show the platform-specific package-manager commands instead.
-   - This skill does not automatically download FunASR model files; provide local model directories explicitly.
+   - All Python packages, models, cache files, configuration, and the manifest are stored under this skill's `lib/` directory. Never install into the system Python.
+   - The only transcription backend is FunASR Chinese mode.
+   - `ffmpeg` is checked but never installed or uninstalled by this skill. Show platform-specific package-manager commands instead.
+   - This skill does not automatically download FunASR model files.
    - After installation, report the runtime Python, package directory, model directory, cache directory, and manual cleanup instructions.
-2. If the user asks the Agent to uninstall or delete this skill:
-   - First report the detected scope and the exact dependency/runtime paths.
-   - Do not automatically delete the runtime, models, cache, or project files.
-   - Offer the user manual deletion commands for the skill-managed `venv`, cache, config, and manifest.
-   - Tell the user that `models/` and project `outputs/` are preserved unless they explicitly request their deletion.
+2. If the user asks to uninstall or delete this skill:
+   - Report the exact `lib/` runtime paths first.
+   - Do not automatically delete the runtime, models, cache, configuration, or project files.
+   - Offer manual deletion commands for `lib/venv`, `lib/cache`, `lib/config`, and `lib/manifest.json`.
+   - Preserve `lib/models/` and project `outputs/` unless the user separately requests their deletion.
    - `ffmpeg` is managed separately by the system package manager and is never removed by this skill.
 3. Identify the input with `scripts/resolve_video.py`.
 4. Get metadata and transcript:
    - For YouTube, Bilibili, Douyin, and generic URLs, try `yt-dlp` first for metadata and subtitles.
    - For local files, use the local path directly.
-   - If usable subtitles are unavailable, extract audio with `scripts/extract_audio.py` and transcribe with the available ASR tool in the current environment.
+   - If usable subtitles are unavailable, extract audio with `scripts/extract_audio.py` and transcribe with the local FunASR backend.
 5. Normalize subtitles or transcripts with `scripts/normalize_transcript.py`.
 6. Read `references/output-templates.md` before writing the final output.
 7. Read `references/platform-notes.md` when handling platform-specific URL behavior.
 8. Read `references/quality-checklist.md` before finalizing.
 
-## Recommended Commands
+## Runtime and Commands
 
-The skill-managed runtime is selected from the skill scope and stored outside the skill directory:
-
-```text
-Project-level skill: <project-root>/.video-content-digest/
-Global skill:        Windows %LOCALAPPDATA%\VideoSummaryRadar\video-content-digest\
-                     macOS   ~/Library/Application Support/VideoSummaryRadar/video-content-digest/
-```
-
-The scope is detected automatically from the nearest project `.git` directory. Override it with:
+The managed runtime is always relative to the current skill directory:
 
 ```text
-VIDEO_DIGEST_SCOPE=project
-VIDEO_DIGEST_SCOPE=global
+<skill-root>/lib/
+├── venv/
+├── models/
+├── cache/
+├── config/
+└── manifest.json
 ```
 
-Set `VIDEO_DIGEST_HOME` to override the complete runtime directory regardless of scope.
-
-The runtime contains `venv/`, `models/`, `cache/`, `config/`, and `manifest.json`. Project outputs remain in the project's `outputs/` directory.
-
-The bootstrap Python must be 3.10 or newer. The skill does not install Python itself.
+The path is resolved by `scripts/runtime_paths.py`; installation scope does not change it.
 
 Check dependencies without changing the environment:
 
-```bash
+```powershell
 python scripts/check_env.py --mode chinese
-python scripts/check_env.py --mode light
 ```
 
-After the user explicitly confirms the reported dependencies and install location, install them into the managed runtime:
+After the user explicitly confirms the reported dependencies and install location:
 
 ```powershell
-python scripts/check_env.py --mode light --install
 python scripts/check_env.py --mode chinese --install
 ```
 
-On macOS, use the same commands with the available Python executable. The script creates `venv/bin/python` automatically.
+The script creates `lib/venv/` automatically. It never installs Python itself, installs `ffmpeg`, or downloads FunASR models.
 
-When the user wants to remove the runtime, `check_env.py` reports manual-only cleanup commands. The Agent must show those paths and wait for the user to delete them manually. This skill has no deletion script.
-
-For CPU-only Windows FunASR setup, the installer uses the matching PyTorch packages from the CPU index when needed:
+For CPU-only Windows FunASR setup, the installer uses matching PyTorch packages from the CPU index when needed:
 
 ```powershell
-<runtime-python> -m pip install funasr yt-dlp
-<runtime-python> -m pip install torch==2.11.0+cpu torchaudio==2.11.0+cpu --index-url https://download.pytorch.org/whl/cpu
+<skill-root>\lib\venv\Scripts\python.exe -m pip install funasr yt-dlp
+<skill-root>\lib\venv\Scripts\python.exe -m pip install torch==2.11.0+cpu torchaudio==2.11.0+cpu --index-url https://download.pytorch.org/whl/cpu
 ```
 
-These are troubleshooting commands only; `<runtime-python>` must point to the skill-managed virtual environment, never the system Python. Prefer `check_env.py --install` so the target environment is selected automatically.
+These are troubleshooting commands only. Prefer `check_env.py --install` so the target environment is selected automatically.
 
-Dependency modes:
+The required ASR model path is:
 
-- `light`: installs/checks `yt-dlp` and `faster-whisper`. Use for low-storage local transcription.
-- `chinese`: installs/checks `yt-dlp`, `funasr`, `torch`, and `torchaudio`. Use for Mandarin-first local transcription.
-- `all`: installs/checks both local transcription backends.
-- `api` and `local` remain accepted as compatibility aliases for older commands.
+```text
+<skill-root>/lib/models/SenseVoiceSmall
+```
 
-The dependency checker reports:
+Optional model paths are:
 
-- Bootstrap Python and the skill-managed runtime Python.
-- Python version prerequisite.
-- Python `site-packages` install location.
-- console-script install location.
-- missing system tools such as `ffmpeg`, their purpose, and platform-specific install/uninstall/location commands.
-- model paths and whether the required ASR model exists.
-- manual cleanup paths and platform-specific deletion commands.
+```text
+<skill-root>/lib/models/FSMN-VAD
+<skill-root>/lib/models/PUNC
+```
 
 Identify input:
 
-```bash
+```powershell
 python scripts/resolve_video.py "<video-url-or-local-path>"
 ```
 
 Extract audio from a local video:
 
-```bash
+```powershell
 python scripts/extract_audio.py "<video-file>" --output outputs/audio.wav
 ```
 
 Normalize subtitles:
 
-```bash
+```powershell
 python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output outputs/transcript.md --format md
 python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output outputs/transcript.json --format json
 ```
 
-Transcribe extracted audio locally when `faster-whisper` is installed:
-
-```bash
-<runtime-python> scripts/transcribe.py outputs/audio.wav --backend light --model base --output outputs/transcript.json --format json
-<runtime-python> scripts/transcribe.py outputs/audio.wav --backend chinese --asr-model path/to/asr --vad-model path/to/fsmn-vad --punc-model path/to/punc --output outputs/transcript.json --format json
-<runtime-python> scripts/transcribe.py outputs/audio.wav --backend chinese --asr-model path/to/asr --output outputs/transcript.md --format md
-```
-
-Example with the managed runtime and local models:
+Transcribe extracted audio:
 
 ```powershell
-%LOCALAPPDATA%\VideoSummaryRadar\video-content-digest\venv\Scripts\python.exe scripts/transcribe.py inputs/audio.wav --backend chinese --asr-model %LOCALAPPDATA%\VideoSummaryRadar\video-content-digest\models\SenseVoiceSmall --vad-model %LOCALAPPDATA%\VideoSummaryRadar\video-content-digest\models\FSMN-VAD --output outputs/transcript.json --format json
+<skill-root>\lib\venv\Scripts\python.exe scripts/transcribe.py outputs/audio.wav --backend chinese --output outputs/transcript.json --format json
 ```
 
 Optional URL preparation with `yt-dlp`:
 
-```bash
+```powershell
 yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o "outputs/%(title).200s/%(title).200s.%(ext)s" "<video-url>"
 ```
 
@@ -158,13 +133,11 @@ yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" 
 - Prefer Chinese subtitles. If only English subtitles exist, translate the final content into Chinese and mention that the source transcript was English.
 - Preserve timestamps whenever possible.
 - If transcript quality is poor, say so briefly in the final output and avoid overconfident claims.
-- If the video cannot be downloaded or transcribed, use any available page metadata and ask the user for a transcript or local file.
+- If the video cannot be downloaded or transcribed, use available page metadata and ask the user for a transcript or local file.
 
 ## Final Output Rules
 
-Use Chinese by default.
-
-Use the exact section order from `references/output-templates.md` unless the user asks for a different format.
+Use Chinese by default and follow the exact section order from `references/output-templates.md` unless the user requests another format.
 
 For long videos, keep the timeline compact but representative:
 
@@ -172,16 +145,24 @@ For long videos, keep the timeline compact but representative:
 - 10-60 minutes: 8-16 timeline items.
 - Over 60 minutes: 12-24 timeline items grouped by topic.
 
+The `内容拆解` section must cover:
+
+1. 选题角度：主题切口、目标受众和与常见表达的差异。
+2. 开头钩子：开场触发方式、原始表述或基于原文的轻度改写，并尽量附时间戳。
+3. 内容结构：问题、论点、案例、结论和转折的组织方式。
+4. 视频爆点：冲突、反常识、案例、数字或情绪峰值，并尽量附时间戳。
+5. 互动引导：视频已有的行动号召，以及可复用的评论讨论问题。
+
 For quotes:
 
-- Include timestamp when available.
+- Include timestamps when available.
 - Prefer memorable original wording.
 - If lightly polished, do not change the meaning.
 
-For WeChat and Xiaohongshu:
+For the two platform drafts:
 
-- WeChat article should be structured, readable, and suitable for long-form publication.
-- Xiaohongshu copy should be more conversational, with a strong hook and tags.
+- `公众号初稿` should be structured, readable, and suitable for long-form publication while remaining a draft for later editing.
+- `小红书初稿` should be conversational, hook-driven, scannable, and include tags while remaining a draft for later editing.
 - Do not exaggerate results, numbers, or causal claims beyond the video.
 
 ## File Output

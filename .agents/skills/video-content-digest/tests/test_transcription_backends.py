@@ -26,15 +26,43 @@ def test_normalize_segment_removes_sensevoice_tags():
     assert result["text"] == "你好 世界"
 
 
-def test_unknown_backend_is_rejected(tmp_path):
+def test_non_chinese_backend_is_rejected(tmp_path):
     audio = tmp_path / "audio.wav"
     audio.write_bytes(b"fake")
-    with pytest.raises(ValueError, match="Unsupported backend"):
-        transcribe_audio(audio, "quality", "small", None, None, None, None)
+    with pytest.raises(ValueError, match="chinese"):
+        transcribe_audio(audio, "light", "zh", None, None, None)
 
 
-def test_chinese_requires_local_asr_model(tmp_path):
+def test_chinese_uses_skill_local_asr_model_by_default(tmp_path, monkeypatch):
     audio = tmp_path / "audio.wav"
     audio.write_bytes(b"fake")
-    with pytest.raises(RuntimeError, match="--asr-model"):
-        transcribe_audio(audio, "chinese", "small", "zh", None, None, None)
+    expected = tmp_path / "SenseVoiceSmall"
+    expected.mkdir()
+
+    monkeypatch.setattr(
+        "transcription_backends.model_paths",
+        lambda: {"asr": expected, "vad": tmp_path / "FSMN-VAD", "punc": tmp_path / "PUNC"},
+    )
+
+    def fake_funasr(audio_path, asr_model, vad_model, punc_model, language):
+        assert audio_path == audio
+        assert asr_model == str(expected)
+        assert vad_model is None
+        assert punc_model is None
+        assert language == "zh"
+        return [{"text": "你好"}]
+
+    monkeypatch.setattr("transcription_backends._transcribe_funasr", fake_funasr)
+    assert transcribe_audio(audio, "chinese", "zh", None, None, None) == [{"text": "你好"}]
+
+
+def test_chinese_requires_local_asr_model(tmp_path, monkeypatch):
+    audio = tmp_path / "audio.wav"
+    audio.write_bytes(b"fake")
+    missing = tmp_path / "missing-model"
+    monkeypatch.setattr(
+        "transcription_backends.model_paths",
+        lambda: {"asr": missing, "vad": tmp_path / "FSMN-VAD", "punc": tmp_path / "PUNC"},
+    )
+    with pytest.raises(FileNotFoundError, match="FunASR 模型路径不存在"):
+        transcribe_audio(audio, "chinese", "zh", None, None, None)

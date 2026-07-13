@@ -1,87 +1,75 @@
-# Dependency Management
+# 依赖管理
 
-## Supported platforms
+## 支持平台
 
-The supported delivery platforms are Windows and macOS. Linux remains a best-effort fallback for the Python runtime path and `ffmpeg` command suggestions.
+支持 Windows 和 macOS。Linux 作为 Python 运行时和 `ffmpeg` 命令的尽力支持平台。
 
-The bootstrap Python must be version 3.10 or newer. This skill does not install Python automatically.
+引导 Python 必须为 3.10 或更高版本。本 skill 不会自动安装 Python。
 
-## Managed runtime locations
+## 运行时位置
 
-The skill never installs Python packages into the system interpreter or into the skill directory.
-
-Project-level skill:
+依赖和模型始终安装在当前 skill 目录的 `lib/` 中：
 
 ```text
-<project-root>/.video-content-digest/
+<skill-root>/lib/
+├── venv/          # 隔离的 Python 环境
+├── models/        # 用户准备的 FunASR 模型
+├── cache/         # 临时下载和处理文件
+├── config/        # skill 管理的配置
+└── manifest.json  # 运行时清单
 ```
 
-Global skill on Windows:
+路径由 `scripts/runtime_paths.py` 解析，不随项目级或全局安装改变。
 
-```text
-%LOCALAPPDATA%\VideoSummaryRadar\video-content-digest\
-```
+## 安装行为
 
-Global skill on macOS:
+`check_env.py` 默认只读。skill 必须先说明缺少的依赖、用途、安装目标和将执行的命令；只有用户明确确认后，才可运行：
 
-```text
-~/Library/Application Support/VideoSummaryRadar/video-content-digest/
-```
-
-Set `VIDEO_DIGEST_HOME` to use another location. The directory contains:
-
-- `venv/`: the isolated Python environment;
-- `models/`: user-provided FunASR models;
-- `cache/`: temporary downloads and files;
-- `config/`: skill-managed configuration;
-- `manifest.json`: records the managed runtime.
-
-The scope is detected from the nearest `.git` directory. Override detection with `VIDEO_DIGEST_SCOPE=project` or `VIDEO_DIGEST_SCOPE=global`.
-
-## Installation behavior
-
-`check_env.py` is read-only by default. The skill must first explain the missing dependencies, their purpose, the target paths, and the commands that will be run. Only after explicit user confirmation should it run:
-
-```bash
-python scripts/check_env.py --mode light --install
+```powershell
 python scripts/check_env.py --mode chinese --install
 ```
 
-The `--install` path creates the user runtime `venv` and installs only the selected Python dependency group there.
+唯一依赖集合为：
 
-`ffmpeg` is a system dependency and is never installed automatically:
+- `yt-dlp`
+- `funasr`
+- `torch`
+- `torchaudio`
 
-- Windows: `winget install Gyan.FFmpeg`;
-- macOS: `brew install ffmpeg`.
+安装命令会创建 `lib/venv/`，并且只向该虚拟环境安装 Python 包。
 
-If Homebrew is missing, tell the user to install Homebrew first. Do not invoke the Homebrew installer from the skill.
+`ffmpeg` 是系统依赖，永远不自动安装：
 
-## Models
+- Windows：`winget install Gyan.FFmpeg`
+- macOS：`brew install ffmpeg`
 
-FunASR model files are never downloaded automatically. For the default Chinese setup, report these paths:
+如果缺少 Homebrew，应提示用户先自行安装，不要从 skill 中执行 Homebrew 安装脚本。
 
-```text
-<VIDEO_DIGEST_HOME>/models/SenseVoiceSmall
-<VIDEO_DIGEST_HOME>/models/FSMN-VAD
-```
+## 模型
 
-The ASR model is required by the Chinese backend. VAD and punctuation models are optional when the backend supports operation without them.
-
-## Removal guidance
-
-When the user asks the Agent to uninstall or delete this skill:
-
-- Report the detected scope and exact dependency/runtime paths first.
-- Do not automatically delete the runtime, models, cache, config, or project files.
-- Let the user manually delete only `venv/`, `cache/`, `config/`, and `manifest.json` when they confirm.
-- Preserve project `outputs/` and user-provided models unless the user separately asks to remove them.
-- Do not remove `ffmpeg`; show its package-manager command only if requested.
-
-`check_env.py` prints manual commands for both platforms:
+FunASR 模型文件永远不自动下载。中文转录默认使用：
 
 ```text
-Windows: Remove-Item -LiteralPath ... -Recurse -Force
-macOS:   rm -rf -- ...
+<skill-root>/lib/models/SenseVoiceSmall
 ```
 
-There is intentionally no deletion script in this skill.
+可选模型为：
+
+```text
+<skill-root>/lib/models/FSMN-VAD
+<skill-root>/lib/models/PUNC
+```
+
+ASR 模型是必需项；VAD 和标点模型由后端按实际存在情况使用。
+
+## 删除和卸载
+
+当用户要求卸载或删除本 skill 管理的运行时：
+
+- 先报告 `lib/` 下的准确路径。
+- 不自动删除虚拟环境、模型、缓存、配置或项目文件。
+- 用户确认后，只提供手动删除 `lib/venv/`、`lib/cache/`、`lib/config/` 和 `lib/manifest.json` 的命令。
+- 除非用户另行要求，否则保留 `lib/models/` 和项目 `outputs/`。
+- 不删除 `ffmpeg`，只在用户询问时展示系统包管理器命令。
+
+本 skill 没有自动删除脚本。

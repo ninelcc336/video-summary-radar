@@ -1,14 +1,16 @@
-# Quality Checklist
+# 质量检查清单
 
-Before finalizing, check:
+最终输出前检查：
 
-- The output is in Chinese unless the user requested another language.
-- The summary, core points, and article do not invent facts outside the transcript or metadata.
-- The timeline contains timestamps when available.
-- Quotes either preserve original wording or are clearly light polish with the same meaning.
-- The WeChat article reads like an article, not a raw transcript.
-- The Xiaohongshu copy has a hook, short paragraphs, scannable points, and tags.
-- Transcript limitations are disclosed when audio/subtitles are incomplete, low quality, or translated.
-- Platform-specific claims are not overstated when only metadata is available.
-- The output records the actual transcription backend and notes when FunASR model paths or punctuation models were unavailable.
-- If the low-storage `light` backend is used for Chinese audio, mention that Chinese names, dialects, or mixed-language speech may need extra review.
+- 除非用户指定其他语言，否则输出为中文。
+- 摘要、核心观点、公众号初稿和小红书初稿不添加字幕、转录或元数据之外的事实。
+- 时间线尽量包含时间戳，并且长视频按主题分组。
+- 金句保留原意；轻微润色时不改变含义。
+- 内容拆解完整包含：选题角度、开头钩子、内容结构、视频爆点、互动引导。
+- 开头钩子、视频爆点和内容结构尽量附时间戳或证据。
+- 公众号初稿结构清晰，适合长文继续编辑，不应是逐字稿拼接。
+- 小红书初稿有钩子、短段落、可扫描分点和标签，并明确可继续编辑。
+- 处理说明记录字幕来源、FunASR 后端、模型路径和已知限制。
+- 音频、字幕不完整或质量较差时，明确披露并避免过度确定的结论。
+- 平台相关判断只在元数据足够时使用，不夸大因果关系或效果。
+- 不绕过登录、付费墙、隐私限制或其他访问控制。

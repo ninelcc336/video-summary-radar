@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Backend adapters for local video transcription."""
+"""FunASR Chinese transcription backend for local video audio."""
 
 from __future__ import annotations
 
@@ -7,8 +7,10 @@ from pathlib import Path
 import re
 from typing import Any
 
+from runtime_paths import model_paths
 
-SUPPORTED_BACKENDS = {"light", "chinese"}
+
+SUPPORTED_BACKENDS = {"chinese"}
 
 
 def format_time(seconds: float | int | None) -> str:
@@ -53,36 +55,10 @@ def normalize_segment(raw: dict[str, Any], backend: str, language: str | None) -
     }
 
 
-def _transcribe_faster_whisper(audio_path: Path, model_name: str, language: str | None) -> list[dict]:
-    try:
-        from faster_whisper import WhisperModel
-    except ImportError as exc:
-        raise RuntimeError("缺少 faster-whisper。请先运行 scripts/check_env.py --mode light --install。") from exc
-
-    model = WhisperModel(model_name, device="auto", compute_type="auto")
-    segments, info = model.transcribe(str(audio_path), language=language, vad_filter=True)
-    detected_language = getattr(info, "language", None) or language
-    probability = getattr(info, "language_probability", None)
-
-    results = []
-    for segment in segments:
-        item = {
-            "start": format_time(segment.start),
-            "end": format_time(segment.end),
-            "text": segment.text.strip(),
-            "language": detected_language,
-            "backend": "light",
-        }
-        if probability is not None:
-            item["language_probability"] = round(float(probability), 4)
-        results.append(item)
-    return results
-
-
 def _require_model_path(name: str, value: str | None, required: bool = False) -> str | None:
     if not value:
         if required:
-            raise RuntimeError(f"chinese 后端需要 --asr-model 指定已准备好的本地 FunASR ASR 模型目录。")
+            raise RuntimeError("chinese 后端需要本地 FunASR ASR 模型目录。")
         return None
     path = Path(value).expanduser().resolve()
     if not path.exists():
@@ -134,18 +110,18 @@ def _transcribe_funasr(
 def transcribe_audio(
     audio_path: Path,
     backend: str,
-    model_name: str,
     language: str | None,
     asr_model: str | None,
     vad_model: str | None,
     punc_model: str | None,
 ) -> list[dict]:
     if backend not in SUPPORTED_BACKENDS:
-        choices = ", ".join(sorted(SUPPORTED_BACKENDS))
-        raise ValueError(f"Unsupported backend: {backend}. Supported backends: {choices}")
+        raise ValueError(f"Unsupported backend: {backend}. Supported backends: chinese")
     if not audio_path.exists():
         raise FileNotFoundError(f"Audio file does not exist: {audio_path}")
 
-    if backend == "light":
-        return _transcribe_faster_whisper(audio_path, model_name, language)
+    defaults = model_paths()
+    asr_model = asr_model or str(defaults["asr"])
+    vad_model = vad_model or (str(defaults["vad"]) if defaults["vad"].exists() else None)
+    punc_model = punc_model or (str(defaults["punc"]) if defaults["punc"].exists() else None)
     return _transcribe_funasr(audio_path, asr_model, vad_model, punc_model, language)

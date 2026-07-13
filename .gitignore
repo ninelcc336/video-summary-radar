@@ -9,4 +9,4 @@ __pycache__/
 # Local model files and generated run outputs
 models/
 outputs/
-.video-content-digest
+.agents/skills/video-content-digest/lib/

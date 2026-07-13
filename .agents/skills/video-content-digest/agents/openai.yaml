@@ -1,4 +1,4 @@
 interface:
   display_name: "Video Content Digest"
-  short_description: "从视频链接生成中文内容包和平台文案"
-  default_prompt: "Use $video-content-digest to turn this video link into a Chinese summary, timeline, quotes, WeChat article, and Xiaohongshu post."
+  short_description: "从视频链接生成中文内容包、内容拆解和平台初稿"
+  default_prompt: "Use $video-content-digest to turn this video link into a Chinese summary, content breakdown, timeline, quotes, WeChat draft, and Xiaohongshu draft."
