@@ -10,3 +10,5 @@ __pycache__/
 models/
 outputs/
 .agents/skills/video-content-digest/lib/
+
+docs/superpowers
