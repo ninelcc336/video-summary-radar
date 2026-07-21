@@ -1,5 +1,5 @@
-"""Creator Intelligence reporting pipeline."""
+"""Creator Intelligence reporting and content-strategy pipeline."""
 
-from creator_intelligence.models import RankedVideo, VideoModel
+from creator_intelligence.models import AccountProfile, DigestJob, RankedVideo, TopicRecommendation, VideoModel
 
-__all__ = ["RankedVideo", "VideoModel"]
+__all__ = ["AccountProfile", "DigestJob", "RankedVideo", "TopicRecommendation", "VideoModel"]

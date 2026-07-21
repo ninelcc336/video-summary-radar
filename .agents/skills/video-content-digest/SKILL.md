@@ -185,3 +185,14 @@ If the title is unknown, use a timestamped name such as:
 ```text
 outputs/video-content-YYYYMMDD-HHMMSS.md
 ```
+
+## 批量任务协作
+
+当上游 `creator-intelligence` 提供 `digest-jobs.json` 时，仍按单视频流程处理每条作业：
+
+1. 只处理作业中的 `url`，不根据标题搜索替代视频。
+2. 将内容包写到作业的 `output_path`，通常为上游任务目录中的 `digests/<stable-key>/content-package.md`，而不是本 skill 默认的 `outputs/` 路径。
+3. 保持本 skill 的固定 Markdown 章节、来源链接、字幕/转写来源、时间戳和质量限制说明。
+4. 不能下载、取得字幕或完成转写时，返回具体失败阶段与原因给上游；不要生成无来源的内容包。
+
+本 skill 不做跨视频规律分析、爆款评分或账号选题推荐；这些任务由 `creator-intelligence` 根据多个内容包和采集证据完成。
