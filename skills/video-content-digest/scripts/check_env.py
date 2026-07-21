@@ -258,7 +258,7 @@ def manual_cleanup_report(paths: RuntimePaths) -> dict:
     return {
         "manual_only": True,
         "paths_to_delete": [str(path) for path in removable],
-        "preserved_paths": [str(paths.models), "<project-root>/outputs/"],
+        "preserved_paths": [str(paths.models), "<workspace>/.video-summary-radar/outputs/"],
         "windows_command": windows_command,
         "macos_command": macos_command,
         "note": "Agent 不会自动删除这些路径；用户需要自行确认并执行。",
@@ -319,7 +319,7 @@ def render_text(report: dict) -> str:
     for path in report["cleanup"]["paths_to_delete"]:
         lines.append(f"- Delete manually: {path}")
     lines.append(f"- Preserve models: {report['models']['base_dir']}")
-    lines.append("- Preserve project outputs: <project-root>/outputs/")
+    lines.append("- Preserve workspace outputs: <workspace>/.video-summary-radar/outputs/")
     lines.append(f"- Windows PowerShell: {report['cleanup']['windows_command']}")
     lines.append(f"- macOS shell: {report['cleanup']['macos_command']}")
     lines.append("")

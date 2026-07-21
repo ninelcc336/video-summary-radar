@@ -61,8 +61,9 @@ def write_report(markdown: str, output_path: str | Path) -> Path:
 
 
 def default_report_path(generated_at: datetime | None = None) -> Path:
+    """返回调用工作区中不污染安装目录的默认报告路径。"""
     value = generated_at or datetime.now(timezone.utc)
-    return Path("reports") / f"creator-intelligence-{value.date().isoformat()}.md"
+    return Path(".video-summary-radar") / "outputs" / "reports" / f"creator-intelligence-{value.date().isoformat()}.md"
 
 
 def _video_from_payload(item: object) -> VideoModel:

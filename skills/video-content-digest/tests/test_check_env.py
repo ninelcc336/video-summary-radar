@@ -10,7 +10,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import check_env  # noqa: E402
-from runtime_paths import model_paths, runtime_paths, skill_root  # noqa: E402
+from runtime_paths import model_paths, runtime_paths  # noqa: E402
 
 
 def test_only_chinese_dependencies_are_supported():
@@ -22,9 +22,11 @@ def test_only_chinese_dependencies_are_supported():
     }
 
 
-def test_runtime_is_inside_the_skill_lib_directory():
+def test_runtime_is_inside_workspace_private_directory(monkeypatch, tmp_path):
+    monkeypatch.setenv("VIDEO_SUMMARY_RADAR_RUNTIME_DIR", str(tmp_path / "runtime"))
     paths = runtime_paths()
-    assert paths.home == skill_root() / "lib"
+    assert paths.scope == "workspace"
+    assert paths.home == tmp_path / "runtime"
     assert paths.models == paths.home / "models"
     assert paths.cache == paths.home / "cache"
 
@@ -64,10 +66,12 @@ def test_ffmpeg_commands_are_platform_specific():
     assert macos["uninstall"] == "brew uninstall ffmpeg"
 
 
-def test_first_check_reports_the_skill_local_runtime():
+def test_first_check_reports_the_workspace_runtime(monkeypatch, tmp_path):
+    runtime_home = tmp_path / "runtime"
+    monkeypatch.setenv("VIDEO_SUMMARY_RADAR_RUNTIME_DIR", str(runtime_home))
     report = check_env.build_report("chinese", install=False)
     assert report["python_environment"]["runtime_exists"] is False
-    assert report["python_environment"]["home"] == str(skill_root() / "lib")
+    assert report["python_environment"]["home"] == str(runtime_home)
     if sys.platform.startswith("win"):
         assert report["python_environment"]["runtime_python"].endswith("venv\\Scripts\\python.exe")
         assert report["python_environment"]["site_packages"].endswith("venv\\Lib\\site-packages")
@@ -86,7 +90,8 @@ def test_cleanup_report_is_manual_and_preserves_models():
     assert cleanup["macos_command"].startswith("rm -rf")
 
 
-def test_install_commands_target_skill_local_runtime(monkeypatch):
+def test_install_commands_target_workspace_runtime(monkeypatch, tmp_path):
+    monkeypatch.setenv("VIDEO_SUMMARY_RADAR_RUNTIME_DIR", str(tmp_path / "runtime"))
     paths = runtime_paths()
     paths.runtime_python.parent.mkdir(parents=True, exist_ok=True)
     paths.runtime_python.write_bytes(b"python")

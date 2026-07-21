@@ -24,16 +24,16 @@ Prefer factual extraction over creative invention. Polished writing is allowed, 
 1. Check dependencies with `scripts/check_env.py --mode chinese`.
    - The bootstrap prerequisite is Python 3.10 or newer. If Python is missing, explain that the user must install it from the official Python distribution before continuing.
    - The checker is read-only unless `--install` is explicitly provided after user confirmation.
-   - All Python packages, models, cache files, configuration, and the manifest are stored under this skill's `lib/` directory. Never install into the system Python.
+   - All Python packages, models, cache files, configuration, and the manifest are stored under `<workspace>/.video-summary-radar/runtime/`. Never write to the installed skill directory or the system Python.
    - The only transcription backend is FunASR Chinese mode.
    - `ffmpeg` is checked but never installed or uninstalled by this skill. Show platform-specific package-manager commands instead.
    - This skill does not automatically download FunASR model files.
    - After installation, report the runtime Python, package directory, model directory, cache directory, and manual cleanup instructions.
 2. If the user asks to uninstall or delete this skill:
-   - Report the exact `lib/` runtime paths first.
+   - Report the exact `<workspace>/.video-summary-radar/runtime/` paths first.
    - Do not automatically delete the runtime, models, cache, configuration, or project files.
-   - Offer manual deletion commands for `lib/venv`, `lib/cache`, `lib/config`, and `lib/manifest.json`.
-   - Preserve `lib/models/` and project `outputs/` unless the user separately requests their deletion.
+   - Offer manual deletion commands for `<workspace>/.video-summary-radar/runtime/venv`, `cache`, `config`, and `manifest.json`.
+   - Preserve `<workspace>/.video-summary-radar/runtime/models/` and workspace outputs unless the user separately requests their deletion.
    - `ffmpeg` is managed separately by the system package manager and is never removed by this skill.
 3. Identify the input with `scripts/resolve_video.py`.
 4. Get metadata and transcript:
@@ -47,10 +47,10 @@ Prefer factual extraction over creative invention. Polished writing is allowed, 
 
 ## Runtime and Commands
 
-The managed runtime is always relative to the current skill directory:
+The managed runtime is always relative to the caller's workspace, not the installed skill directory:
 
 ```text
-<skill-root>/lib/
+<workspace>/.video-summary-radar/runtime/
 ├── venv/
 ├── models/
 ├── cache/
@@ -58,7 +58,7 @@ The managed runtime is always relative to the current skill directory:
 └── manifest.json
 ```
 
-The path is resolved by `scripts/runtime_paths.py`; installation scope does not change it.
+The path is resolved by `scripts/runtime_paths.py`. Set `VIDEO_SUMMARY_RADAR_RUNTIME_DIR` only when the user explicitly requests another private runtime location.
 
 Check dependencies without changing the environment:
 
@@ -72,13 +72,13 @@ After the user explicitly confirms the reported dependencies and install locatio
 python scripts/check_env.py --mode chinese --install
 ```
 
-The script creates `lib/venv/` automatically. It never installs Python itself, installs `ffmpeg`, or downloads FunASR models.
+The script creates `<workspace>/.video-summary-radar/runtime/venv/` automatically. It never installs Python itself, installs `ffmpeg`, or downloads FunASR models.
 
 For CPU-only Windows FunASR setup, the installer uses matching PyTorch packages from the CPU index when needed:
 
 ```powershell
-<skill-root>\lib\venv\Scripts\python.exe -m pip install funasr yt-dlp
-<skill-root>\lib\venv\Scripts\python.exe -m pip install torch==2.11.0+cpu torchaudio==2.11.0+cpu --index-url https://download.pytorch.org/whl/cpu
+<workspace>\.video-summary-radar\runtime\venv\Scripts\python.exe -m pip install funasr yt-dlp
+<workspace>\.video-summary-radar\runtime\venv\Scripts\python.exe -m pip install torch==2.11.0+cpu torchaudio==2.11.0+cpu --index-url https://download.pytorch.org/whl/cpu
 ```
 
 These are troubleshooting commands only. Prefer `check_env.py --install` so the target environment is selected automatically.
@@ -86,14 +86,14 @@ These are troubleshooting commands only. Prefer `check_env.py --install` so the 
 The required ASR model path is:
 
 ```text
-<skill-root>/lib/models/SenseVoiceSmall
+<workspace>/.video-summary-radar/runtime/models/SenseVoiceSmall
 ```
 
 Optional model paths are:
 
 ```text
-<skill-root>/lib/models/FSMN-VAD
-<skill-root>/lib/models/PUNC
+<workspace>/.video-summary-radar/runtime/models/FSMN-VAD
+<workspace>/.video-summary-radar/runtime/models/PUNC
 ```
 
 Identify input:
@@ -105,26 +105,26 @@ python scripts/resolve_video.py "<video-url-or-local-path>"
 Extract audio from a local video:
 
 ```powershell
-python scripts/extract_audio.py "<video-file>" --output outputs/audio.wav
+python scripts/extract_audio.py "<video-file>" --output .video-summary-radar/outputs/audio.wav
 ```
 
 Normalize subtitles:
 
 ```powershell
-python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output outputs/transcript.md --format md
-python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output outputs/transcript.json --format json
+python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output .video-summary-radar/outputs/transcript.md --format md
+python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output .video-summary-radar/outputs/transcript.json --format json
 ```
 
 Transcribe extracted audio:
 
 ```powershell
-<skill-root>\lib\venv\Scripts\python.exe scripts/transcribe.py outputs/audio.wav --backend chinese --output outputs/transcript.json --format json
+<workspace>\.video-summary-radar\runtime\venv\Scripts\python.exe scripts/transcribe.py .video-summary-radar/outputs/audio.wav --backend chinese --output .video-summary-radar/outputs/transcript.json --format json
 ```
 
 Optional URL preparation with `yt-dlp`:
 
 ```powershell
-yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o "outputs/%(title).200s/%(title).200s.%(ext)s" "<video-url>"
+yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o ".video-summary-radar/outputs/%(title).200s/%(title).200s.%(ext)s" "<video-url>"
 ```
 
 ## Transcript Rules
@@ -170,20 +170,20 @@ For the two platform drafts:
 When the user wants files, save Markdown to:
 
 ```text
-outputs/<safe-video-title>-content-package.md
+.video-summary-radar/outputs/<safe-video-title>-content-package.md
 ```
 
 Also save transcript files when generated:
 
 ```text
-outputs/<safe-video-title>-transcript.md
-outputs/<safe-video-title>-transcript.json
+.video-summary-radar/outputs/<safe-video-title>-transcript.md
+.video-summary-radar/outputs/<safe-video-title>-transcript.json
 ```
 
 If the title is unknown, use a timestamped name such as:
 
 ```text
-outputs/video-content-YYYYMMDD-HHMMSS.md
+.video-summary-radar/outputs/video-content-YYYYMMDD-HHMMSS.md
 ```
 
 ## 批量任务协作
@@ -191,7 +191,7 @@ outputs/video-content-YYYYMMDD-HHMMSS.md
 当上游 `creator-intelligence` 提供 `digest-jobs.json` 时，仍按单视频流程处理每条作业：
 
 1. 只处理作业中的 `url`，不根据标题搜索替代视频。
-2. 将内容包写到作业的 `output_path`，通常为上游任务目录中的 `digests/<stable-key>/content-package.md`，而不是本 skill 默认的 `outputs/` 路径。
+2. 将内容包写到作业的 `output_path`，通常为上游任务目录中的 `digests/<stable-key>/content-package.md`，而不是本 skill 默认的 `.video-summary-radar/outputs/` 路径。
 3. 保持本 skill 的固定 Markdown 章节、来源链接、字幕/转写来源、时间戳和质量限制说明。
 4. 不能下载、取得字幕或完成转写时，返回具体失败阶段与原因给上游；不要生成无来源的内容包。
 

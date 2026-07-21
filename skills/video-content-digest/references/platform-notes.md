@@ -7,7 +7,7 @@
 - 如果只有英文字幕，保留原意并将最终内容输出为中文，同时说明原始字幕为英文。
 
 ```powershell
-yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o "outputs/%(title).200s/%(title).200s.%(ext)s" "<url>"
+yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o ".video-summary-radar/outputs/%(title).200s/%(title).200s.%(ext)s" "<url>"
 ```
 
 ## Bilibili
@@ -31,8 +31,8 @@ yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" 
 ## 转录
 
 - 本地转录只使用 FunASR 中文后端。
-- ASR 模型默认位于 `lib/models/SenseVoiceSmall`，缺失时报告准确路径。
-- `lib/models/FSMN-VAD` 和 `lib/models/PUNC` 为可选模型。
+- ASR 模型默认位于 `<workspace>/.video-summary-radar/runtime/models/SenseVoiceSmall`，缺失时报告准确路径。
+- `<workspace>/.video-summary-radar/runtime/models/FSMN-VAD` 和 `PUNC` 为可选模型。
 - FunASR 模型文件不会自动下载。
 - Windows CPU 部署时，`torch` 与 `torchaudio` 使用匹配版本；安装器会使用 CPU 软件源。
 - 最终内容包记录实际转录后端、模型来源和转录限制。
@@ -40,8 +40,8 @@ yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" 
 ## 依赖设置
 
 - Python 必须为 3.10 或更高版本。
-- Python 依赖安装在当前 skill 目录的 `lib/venv/`。
-- 模型安装在当前 skill 目录的 `lib/models/`。
+- Python 依赖安装在工作区私有的 `.video-summary-radar/runtime/venv/`。
+- 模型安装在工作区私有的 `.video-summary-radar/runtime/models/`。
 - 使用 `where.exe ffmpeg`（Windows）或 `which ffmpeg`（macOS）检查 `ffmpeg`。
 - 手动安装 `ffmpeg` 使用 `winget install Gyan.FFmpeg` 或 `brew install ffmpeg`。
 

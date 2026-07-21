@@ -42,10 +42,10 @@ python <skill_path>/scripts/check_environment.py --json
 
 阅读 `references/platform-capabilities.md` 中对应平台的说明，再调用当前 Agent-Reach 环境实际可用的只读命令。保留原始链接、发布时间、播放/互动指标与抓取时间。
 
-将结果归一化为 `references/data-schema.md` 定义的 collection JSON，写入 `outputs/collection.json`，再运行：
+将结果归一化为 `references/data-schema.md` 定义的 collection JSON，写入 `.video-summary-radar/outputs/collection.json`，再运行：
 
 ```bash
-python <skill_path>/scripts/run_report.py --range 7d --input outputs/collection.json
+python <skill_path>/scripts/run_report.py --range 7d --input .video-summary-radar/outputs/collection.json
 ```
 
 平台需要登录、没有当前环境后端、返回字段不足或命令超时时，保留对应失败状态并继续其他平台。不要绕过访问控制。
@@ -59,8 +59,8 @@ python <skill_path>/scripts/collect_public.py \
   --topic "AI 工具" \
   --range 7d \
   --platform youtube,bilibili \
-  --output outputs/collection.json
-python <skill_path>/scripts/run_report.py --range 7d --input outputs/collection.json
+  --output .video-summary-radar/outputs/collection.json
+python <skill_path>/scripts/run_report.py --range 7d --input .video-summary-radar/outputs/collection.json
 ```
 
 - YouTube 使用本机已安装的 `yt-dlp` 搜索公开结果。
@@ -80,7 +80,7 @@ python <skill_path>/scripts/run_report.py --range 7d --input outputs/collection.
 4. 创建任务目录：
 
 ```powershell
-python <skill_path>/scripts/prepare_digest_batch.py --collection outputs/collection.json --profile account-profile.json --range 7d --mode top --limit 10 --output-dir outputs/content-strategy
+python <skill_path>/scripts/prepare_digest_batch.py --collection .video-summary-radar/outputs/collection.json --profile account-profile.json --range 7d --mode top --limit 10 --output-dir .video-summary-radar/outputs/content-strategy
 ```
 
 - 默认使用 `top`，仅在用户明确要求全量蒸馏时使用 `--mode all`。
@@ -101,7 +101,7 @@ python <skill_path>/scripts/prepare_digest_batch.py --collection outputs/collect
 完成可用作业后运行：
 
 ```powershell
-python <skill_path>/scripts/run_content_strategy.py --run-dir outputs/content-strategy --range 7d
+python <skill_path>/scripts/run_content_strategy.py --run-dir .video-summary-radar/outputs/content-strategy --range 7d
 ```
 
 它会更新 `digest-manifest.json`，并写出：

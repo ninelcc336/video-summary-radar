@@ -8,10 +8,10 @@
 
 ## 运行时位置
 
-依赖和模型始终安装在当前 skill 目录的 `lib/` 中：
+依赖和模型始终安装在调用项目的私有运行目录中：
 
 ```text
-<skill-root>/lib/
+<workspace>/.video-summary-radar/runtime/
 ├── venv/          # 隔离的 Python 环境
 ├── models/        # 用户准备的 FunASR 模型
 ├── cache/         # 临时下载和处理文件
@@ -36,7 +36,7 @@ python scripts/check_env.py --mode chinese --install
 - `torch`
 - `torchaudio`
 
-安装命令会创建 `lib/venv/`，并且只向该虚拟环境安装 Python 包。
+安装命令会创建 `<workspace>/.video-summary-radar/runtime/venv/`，并且只向该虚拟环境安装 Python 包。
 
 `ffmpeg` 是系统依赖，永远不自动安装：
 
@@ -50,14 +50,14 @@ python scripts/check_env.py --mode chinese --install
 FunASR 模型文件永远不自动下载。中文转录默认使用：
 
 ```text
-<skill-root>/lib/models/SenseVoiceSmall
+<workspace>/.video-summary-radar/runtime/models/SenseVoiceSmall
 ```
 
 可选模型为：
 
 ```text
-<skill-root>/lib/models/FSMN-VAD
-<skill-root>/lib/models/PUNC
+<workspace>/.video-summary-radar/runtime/models/FSMN-VAD
+<workspace>/.video-summary-radar/runtime/models/PUNC
 ```
 
 ASR 模型是必需项；VAD 和标点模型由后端按实际存在情况使用。
@@ -66,10 +66,10 @@ ASR 模型是必需项；VAD 和标点模型由后端按实际存在情况使用
 
 当用户要求卸载或删除本 skill 管理的运行时：
 
-- 先报告 `lib/` 下的准确路径。
+- 先报告 `<workspace>/.video-summary-radar/runtime/` 下的准确路径。
 - 不自动删除虚拟环境、模型、缓存、配置或项目文件。
-- 用户确认后，只提供手动删除 `lib/venv/`、`lib/cache/`、`lib/config/` 和 `lib/manifest.json` 的命令。
-- 除非用户另行要求，否则保留 `lib/models/` 和项目 `outputs/`。
+- 用户确认后，只提供手动删除 `<workspace>/.video-summary-radar/runtime/venv/`、`cache/`、`config/` 和 `manifest.json` 的命令。
+- 除非用户另行要求，否则保留 `<workspace>/.video-summary-radar/runtime/models/` 和工作区输出。
 - 不删除 `ffmpeg`，只在用户询问时展示系统包管理器命令。
 
 本 skill 没有自动删除脚本。

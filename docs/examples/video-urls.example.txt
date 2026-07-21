@@ -1,0 +1,5 @@
+# 使用你有权访问的公开视频 URL；不要提交个人追踪参数、Cookie 或登录态 token。
+https://www.youtube.com/watch?v=VIDEO_ID
+https://www.bilibili.com/video/BV_ID
+https://www.douyin.com/video/VIDEO_ID
+https://www.xiaohongshu.com/explore/NOTE_ID

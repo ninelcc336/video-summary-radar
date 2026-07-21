@@ -1,24 +1,44 @@
 # Video Summary Radar
 
-## 项目简介
+面向 Codex、Claude Code、Cursor 及其他遵循 Agent Skills 约定的 Agent 的视频内容情报技能集。
 
-这个仓库用于整理和演示视频内容摘要、转录与生成相关的数据与工具。它包含了一些视频来源链接、输出结果以及 AI 代理技能配置，适合用于视频内容分析、短视频素材处理和内容包生成的参考。
+Video intelligence skills for Codex, Claude Code, Cursor, and other agents that support the Agent Skills convention.
 
-## 目录结构
+## 安装 / Install
 
-- `.agents/` - 代理技能和相关配置
-- `docs/` - 文档目录
-- `outputs/` - 生成的转录、内容包和输出文件
-- `video-url.txt` - 视频链接示例列表
-- `.gitignore` - Git 忽略规则
+推荐按需安装，不要一次装入全部技能，以免增加 Agent 的常驻上下文：
 
-## 使用说明
+```bash
+npx skills add <github-owner>/video-summary-radar
+```
 
-1. `video-url.txt` 中是测试用的视频链接。
-2. `outputs/` 目录下存放了不同视频的转录文本、内容包和结果文件，可作为样例数据阅读和分析。
-3. `.agents/skills` 目录里包含了 `video-content-digest` 相关技能的定义和参考资料，说明该项目可能用于 AI 视频摘要/内容消化场景。
+若安装器尚未支持你的 Agent，请仅复制所需的 `skills/<skill-name>/` 完整目录到该 Agent 的 skills 目录。不要复制运行缓存、模型或生成结果。
 
-## 注意事项
+## 稳定技能 / Stable skills
 
-- `docs/superpowers` 已列入 `.gitignore`，不会被 Git 追踪。
-- `outputs/` 目录也在 `.gitignore` 中，因此本地生成内容不会提交到版本库。
+| Skill | 用途 |
+| --- | --- |
+| `video-content-digest` | 将视频链接或本地视频转为中文摘要、时间线、金句和多平台内容初稿。 |
+| `creator-intelligence` | 基于可验证的公开数据生成创作者情报、热点分析与选题策略。 |
+
+所有 skill 都以 `SKILL.md` 为跨平台入口。当前不维护各 Agent 的专用适配层或市场插件。
+
+## 运行时与隐私 / Runtime and privacy
+
+- 技能源码目录只读；虚拟环境、模型、缓存与结果默认位于调用项目的 `.video-summary-radar/`。
+- 首次使用只做依赖检查。安装 Python 包或下载模型必须由用户明确确认。
+- 不提交 `.video-summary-radar/`、密钥、Cookie、真实账号配置或真实任务输出。
+
+详见 [安装说明](docs/INSTALLATION.md)、[架构](docs/ARCHITECTURE.md) 与[贡献指南](docs/CONTRIBUTING.md)。
+
+## 生命周期与发布 / Lifecycle and releases
+
+- `skills/`：稳定技能，满足 CI 与发布门槛，可被默认安装。
+- `experimental/`：预览技能，不保证兼容性或输出稳定性。
+- `deprecated/`：废弃技能的迁移说明；不保留可执行旧副本。
+
+仓库整体采用语义化版本，首个公开版本为 `v0.1.0`。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+## 许可证 / License
+
+[MIT](LICENSE)

@@ -6,9 +6,11 @@ __pycache__/
 *$py.class
 .DS_Store
 
-# Local model files and generated run outputs
-models/
+# 工作区私有运行数据：环境、模型、缓存与生成结果均不进入源码仓库。
+.video-summary-radar/
 outputs/
-.agents/skills/video-content-digest/lib/
+models/
+*.env
+*.local.yaml
 
 docs/superpowers
