@@ -7,42 +7,39 @@ description: Convert YouTube, Bilibili, Douyin/TikTok-style short video links, g
 
 ## Purpose
 
-Turn one video input into a structured Chinese content package:
+Turn one video input into a Chinese content package that lets a reader understand the video without watching it. The default package has two reading layers:
 
-- 视频摘要
-- 核心观点
-- 内容拆解
-- 时间线
-- 金句
-- 公众号初稿
-- 小红书初稿
+- 结论速览：约一分钟读完的问题、结论、方法、证据和限制。
+- 完整内容还原：按主题和论证逻辑重组口播、字幕与必要画面信息，不机械复述镜头顺序。
 
-Prefer factual extraction over creative invention. Polished writing is allowed, but claims must come from the video transcript, captions, title, description, or user-provided context.
+The default output is for accurate understanding, not social-media repurposing. 公众号、小红书、标题或二次剪辑建议 are generated only when the user explicitly asks for them.
+
+Prefer factual extraction over creative invention. Keep source evidence separate from editorial analysis; every claim must come from the video transcript, captions, visible page content, key frames, title, description, or user-provided context.
 
 ## Workflow
 
-1. Check dependencies with `scripts/check_env.py --mode chinese`.
+1. Identify the input with `scripts/resolve_video.py` and read `references/platform-notes.md`.
+2. For URL inputs, inspect available browser-capable tools, plugins, and skills before considering local transcription. When present, prefer the following evidence order:
+   - browser access using the user's existing session (for example Codex Chrome, `agent-browser`, or `agent-reach`), limited to visible public page content, captions, chapters, descriptions, key frames, and playable content;
+   - public page metadata and subtitles via `yt-dlp`;
+   - local audio extraction and FunASR transcription only when the first two sources do not sufficiently recover the main content.
+   Do not inspect cookies or session stores, bypass login/access controls, or perform social actions. If a browser page requires login, ask the user to sign in or provide a local file/subtitle export. Do not download video merely to make the browser path work.
+3. Build an evidence inventory before writing: title/description, subtitles or ASR, chapter summaries, and necessary visual evidence such as slides, code, UI steps, charts, or before/after states. Resolve conflicts with this priority: clear visual original text or clear speech > human subtitles > automatic subtitles or ASR > page chapter summaries. Record unresolved conflicts instead of silently merging them.
+4. Use local transcription only if the evidence inventory cannot recover the main content. Treat less than roughly 60% usable coverage of the main content as insufficient.
+   - Then check dependencies with `scripts/check_env.py --mode chinese`.
    - The bootstrap prerequisite is Python 3.10 or newer. If Python is missing, explain that the user must install it from the official Python distribution before continuing.
    - The checker is read-only unless `--install` is explicitly provided after user confirmation.
    - All Python packages, models, cache files, configuration, and the manifest are stored under `<workspace>/.video-summary-radar/runtime/`. Never write to the installed skill directory or the system Python.
-   - The only transcription backend is FunASR Chinese mode.
-   - `ffmpeg` is checked but never installed or uninstalled by this skill. Show platform-specific package-manager commands instead.
-   - This skill does not automatically download FunASR model files.
-   - After installation, report the runtime Python, package directory, model directory, cache directory, and manual cleanup instructions.
-2. If the user asks to uninstall or delete this skill:
+   - The only transcription backend is FunASR Chinese mode. `ffmpeg` is checked but never installed or uninstalled by this skill, and FunASR models are never downloaded automatically.
+   - If the user declines the required installation or files, deliver all reliable evidence and a `待确认信息` section rather than inventing missing content.
+5. If the user asks to uninstall or delete this skill:
    - Report the exact `<workspace>/.video-summary-radar/runtime/` paths first.
    - Do not automatically delete the runtime, models, cache, configuration, or project files.
    - Offer manual deletion commands for `<workspace>/.video-summary-radar/runtime/venv`, `cache`, `config`, and `manifest.json`.
    - Preserve `<workspace>/.video-summary-radar/runtime/models/` and workspace outputs unless the user separately requests their deletion.
    - `ffmpeg` is managed separately by the system package manager and is never removed by this skill.
-3. Identify the input with `scripts/resolve_video.py`.
-4. Get metadata and transcript:
-   - For YouTube, Bilibili, Douyin, and generic URLs, try `yt-dlp` first for metadata and subtitles.
-   - For local files, use the local path directly.
-   - If usable subtitles are unavailable, extract audio with `scripts/extract_audio.py` and transcribe with the local FunASR backend.
-5. Normalize subtitles or transcripts with `scripts/normalize_transcript.py`.
-6. Read `references/output-templates.md` before writing the final output.
-7. Read `references/platform-notes.md` when handling platform-specific URL behavior.
+6. Normalize subtitles or transcripts with `scripts/normalize_transcript.py`. Save the normalized transcript as a local companion artifact even when it is not displayed in the main package.
+7. Read `references/output-templates.md` before writing the final output.
 8. Read `references/quality-checklist.md` before finalizing.
 
 ## Runtime and Commands
@@ -132,38 +129,20 @@ yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" 
 - Prefer human-created subtitles over auto-generated subtitles.
 - Prefer Chinese subtitles. If only English subtitles exist, translate the final content into Chinese and mention that the source transcript was English.
 - Preserve timestamps whenever possible.
+- Keep the raw or normalized transcript as a local evidence file, but do not make it the default reading experience. The main package must be a semantic reconstruction.
 - If transcript quality is poor, say so briefly in the final output and avoid overconfident claims.
-- If the video cannot be downloaded or transcribed, use available page metadata and ask the user for a transcript or local file.
+- For slide, code, chart, UI, or comparison-heavy videos, capture and describe only the visual details required to understand the argument. Attach 3-8 key frames only when text description would lose essential information.
+- If the main content remains unavailable after browser and subtitle attempts, return the reliable evidence plus `待确认信息`; ask for a local file, exported subtitles, screenshots, or approval to prepare local transcription as appropriate.
 
 ## Final Output Rules
 
-Use Chinese by default and follow the exact section order from `references/output-templates.md` unless the user requests another format.
+Use Chinese by default and follow the exact section order from `references/output-templates.md` unless the user requests another format. Organize the main reconstruction by problem, conclusion, method, evidence/case, and limitation; use timestamps only as evidence markers, never as an instruction to replay the video.
 
-For long videos, keep the timeline compact but representative:
+The package must let a reader answer, without watching the source: what problem the video addresses, its conclusion, how it argues or demonstrates the conclusion, what evidence it uses, and what remains uncertain.
 
-- Under 10 minutes: 5-10 timeline items.
-- 10-60 minutes: 8-16 timeline items.
-- Over 60 minutes: 12-24 timeline items grouped by topic.
+For quotes, preserve original wording and attach an evidence time only when it materially helps provenance. If lightly polished, do not change the meaning.
 
-The `内容拆解` section must cover:
-
-1. 选题角度：主题切口、目标受众和与常见表达的差异。
-2. 开头钩子：开场触发方式、原始表述或基于原文的轻度改写，并尽量附时间戳。
-3. 内容结构：问题、论点、案例、结论和转折的组织方式。
-4. 视频爆点：冲突、反常识、案例、数字或情绪峰值，并尽量附时间戳。
-5. 互动引导：视频已有的行动号召，以及可复用的评论讨论问题。
-
-For quotes:
-
-- Include timestamps when available.
-- Prefer memorable original wording.
-- If lightly polished, do not change the meaning.
-
-For the two platform drafts:
-
-- `公众号初稿` should be structured, readable, and suitable for long-form publication while remaining a draft for later editing.
-- `小红书初稿` should be conversational, hook-driven, scannable, and include tags while remaining a draft for later editing.
-- Do not exaggerate results, numbers, or causal claims beyond the video.
+Generate creative repurposing only when explicitly requested, under `创作复用（按需）`. Do not exaggerate results, numbers, or causal claims beyond the evidence.
 
 ## File Output
 
@@ -179,6 +158,8 @@ Also save transcript files when generated:
 .video-summary-radar/outputs/<safe-video-title>-transcript.md
 .video-summary-radar/outputs/<safe-video-title>-transcript.json
 ```
+
+The transcript is an evidence companion, not a substitute for the content package. When visual evidence is essential, save the selected key frames beside the package and link them from `关键画面与操作`.
 
 If the title is unknown, use a timestamped name such as:
 

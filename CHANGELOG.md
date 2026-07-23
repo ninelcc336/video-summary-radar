@@ -13,3 +13,7 @@
 
 - 首次以视频内容情报 Agent Skills 源码仓库形式发布。
 - `video-content-digest` 与 `creator-intelligence` 两项稳定技能。
+
+## [0.1.1] - 2026-07-23
+
+- 优化 `video-content-digest`：优先使用浏览器能力取证，默认输出语义化内容还原、待确认信息与证据说明；创作复用改为按需生成。
