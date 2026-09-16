@@ -1,11 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.2] - 2026-09-17
 
 ### Changed
 
 - 将技能源码从 `.agents/skills/` 迁移到跨 Agent 的 `skills/` 目录。
 - 将运行环境、模型、缓存和生成结果迁移为工作区私有数据。
+- `video-content-digest` 现在可直接规范化本地 ASR 生成的 JSON 转录结果。
+- Windows 上校验 FunASR 模型路径时不再解析映射驱动器路径。
 
 ## [0.1.0] - 2026-07-21
 

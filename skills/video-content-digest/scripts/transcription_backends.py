@@ -56,11 +56,14 @@ def normalize_segment(raw: dict[str, Any], backend: str, language: str | None) -
 
 
 def _require_model_path(name: str, value: str | None, required: bool = False) -> str | None:
+    """Validate a model directory without resolving mapped-drive paths on Windows."""
     if not value:
         if required:
             raise RuntimeError("chinese 后端需要本地 FunASR ASR 模型目录。")
         return None
-    path = Path(value).expanduser().resolve()
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
     if not path.exists():
         raise FileNotFoundError(f"FunASR 模型路径不存在：{path}")
     return str(path)

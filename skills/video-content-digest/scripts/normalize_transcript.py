@@ -67,7 +67,29 @@ def parse_plain_text(content: str) -> list[dict]:
 
 
 def parse_transcript(path: Path) -> list[dict]:
+    """Parse supported subtitle text or the JSON emitted by the local ASR runner."""
     content = path.read_text(encoding="utf-8", errors="replace")
+    if path.suffix.lower() == ".json":
+        try:
+            raw_segments = json.loads(content)
+        except json.JSONDecodeError:
+            raw_segments = None
+        if isinstance(raw_segments, list):
+            segments = []
+            for item in raw_segments:
+                if not isinstance(item, dict):
+                    continue
+                text = clean_text([str(item.get("text") or "")])
+                if text:
+                    segments.append(
+                        {
+                            "start": str(item.get("start") or ""),
+                            "end": str(item.get("end") or ""),
+                            "text": text,
+                        }
+                    )
+            if segments:
+                return segments
     segments = parse_timed_blocks(content)
     if segments:
         return segments
