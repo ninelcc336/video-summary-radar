@@ -1,18 +1,18 @@
 ---
 name: video-content-digest
-description: Convert YouTube, Bilibili, Douyin/TikTok-style short video links, generic video URLs, or local video file paths into Chinese content packages. Use this skill whenever the user provides a video link or local video path and asks for video summaries, key points, timestamped timelines, quotes, transcripts, WeChat public account drafts, Xiaohongshu drafts, content repurposing, video notes, content breakdowns, or social media copy based on video content.
+description: 获取 YouTube、B站、抖音、TikTok、通用视频链接或本地视频中的内容，提取字幕、口播与必要画面，交付中文摘要、内容还原和可追溯转录稿。用户要求读取、总结或转写视频时使用；基于视频创作文案时仅承担前置内容获取，不负责微信公众号、小红书等二次创作。
 ---
 
 # Video Content Digest
 
 ## Purpose
 
-Turn one video input into a Chinese content package that lets a reader understand the video without watching it. The default package has two reading layers:
+只负责获取并忠实整理单个视频的内容，包括字幕、口播、必要画面和来源信息。交付结果让读者不看原视频也能理解其内容；不承担文案改写、传播策略或发布。默认内容包有两个阅读层次：
 
 - 结论速览：约一分钟读完的问题、结论、方法、证据和限制。
 - 完整内容还原：按主题和论证逻辑重组口播、字幕与必要画面信息，不机械复述镜头顺序。
 
-The default output is for accurate understanding, not social-media repurposing. 公众号、小红书、标题或二次剪辑建议 are generated only when the user explicitly asks for them.
+获取完成后，可提供“仅保留视频内容（默认） / 微信公众号文案 / 小红书文案 / 其他形式”的后续选项。用户未选择时，交付内容包即完成任务；用户已明确指定创作形式时，直接把内容包作为后续独立创作任务的输入，不重复询问。本 skill 的交付物始终只包含视频内容与证据。
 
 Prefer factual extraction over creative invention. Keep source evidence separate from editorial analysis; every claim must come from the video transcript, captions, visible page content, key frames, title, description, or user-provided context.
 
@@ -22,10 +22,12 @@ Prefer factual extraction over creative invention. Keep source evidence separate
 2. For URL inputs, inspect available browser-capable tools, plugins, and skills before considering local transcription. When present, prefer the following evidence order:
    - browser access using the user's existing session (for example Codex Chrome, `agent-browser`, or `agent-reach`), limited to visible public page content, captions, chapters, descriptions, key frames, and playable content;
    - public page metadata and subtitles via `yt-dlp`;
-   - local audio extraction and FunASR transcription only when the first two sources do not sufficiently recover the main content.
-   Do not inspect cookies or session stores, bypass login/access controls, or perform social actions. If a browser page requires login, ask the user to sign in or provide a local file/subtitle export. Do not download video merely to make the browser path work.
+   - when browser and public subtitle access cannot sufficiently recover the main content of a Bilibili or Douyin video, use the PeanutDL fallback in `references/platform-notes.md`: [Bilibili](https://peanutdl.com/zh/bilibili) or [Douyin](https://peanutdl.com/zh/douyin);
+   - use the downloaded or user-provided local video for audio extraction and FunASR transcription when the main content still needs recovery.
+   Do not inspect cookies or session stores, bypass login/access controls, or perform social actions. A login prompt on the source page does not end retrieval of an otherwise public video: try available public subtitle and PeanutDL paths first. If the source itself requires private, paid, or authorized access, ask the user to sign in or provide a local file/subtitle export.
 3. Build an evidence inventory before writing: title/description, subtitles or ASR, chapter summaries, and necessary visual evidence such as slides, code, UI steps, charts, or before/after states. Resolve conflicts with this priority: clear visual original text or clear speech > human subtitles > automatic subtitles or ASR > page chapter summaries. Record unresolved conflicts instead of silently merging them.
 4. Use local transcription only if the evidence inventory cannot recover the main content. Treat less than roughly 60% usable coverage of the main content as insufficient.
+   - For Bilibili and Douyin URLs, try the PeanutDL download fallback before asking the user for a local video; downloading alone does not mean the content has been read. Follow it with audio transcription and necessary visual extraction.
    - Then check dependencies with `scripts/check_env.py --mode chinese`.
    - The bootstrap prerequisite is Python 3.10 or newer. If Python is missing, explain that the user must install it from the official Python distribution before continuing.
    - The checker is read-only unless `--install` is explicitly provided after user confirmation.
@@ -40,7 +42,7 @@ Prefer factual extraction over creative invention. Keep source evidence separate
    - `ffmpeg` is managed separately by the system package manager and is never removed by this skill.
 6. Normalize subtitles or transcripts with `scripts/normalize_transcript.py`. Save the normalized transcript as a local companion artifact even when it is not displayed in the main package.
 7. Read `references/output-templates.md` before writing the final output.
-8. Read `references/quality-checklist.md` before finalizing.
+8. Read `references/quality-checklist.md` before finalizing. Deliver the available video content before offering optional follow-up creation; do not block retrieval or delivery on a platform-copy choice.
 
 ## Runtime and Commands
 
@@ -132,7 +134,7 @@ yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" 
 - Keep the raw or normalized transcript as a local evidence file, but do not make it the default reading experience. The main package must be a semantic reconstruction.
 - If transcript quality is poor, say so briefly in the final output and avoid overconfident claims.
 - For slide, code, chart, UI, or comparison-heavy videos, capture and describe only the visual details required to understand the argument. Attach 3-8 key frames only when text description would lose essential information.
-- If the main content remains unavailable after browser and subtitle attempts, return the reliable evidence plus `待确认信息`; ask for a local file, exported subtitles, screenshots, or approval to prepare local transcription as appropriate.
+- If the main content remains unavailable after applicable browser, subtitle, PeanutDL download, and local transcription attempts, return the reliable evidence plus `待确认信息`. State the failed stage and reason, and request only the missing local file, subtitles, visual evidence, or transcription setup. Do not present a title or description as recovered video content.
 
 ## Final Output Rules
 
@@ -142,7 +144,7 @@ The package must let a reader answer, without watching the source: what problem 
 
 For quotes, preserve original wording and attach an evidence time only when it materially helps provenance. If lightly polished, do not change the meaning.
 
-Generate creative repurposing only when explicitly requested, under `创作复用（按需）`. Do not exaggerate results, numbers, or causal claims beyond the evidence.
+只整理视频已有的结论、步骤、案例与限制，不加入选题推荐、传播效果预测、平台文案或二次剪辑方案。可在内容包之外提供后续创作选项；具体文案由用户选定后的独立任务处理，复用已保存的内容与证据，无需重新获取视频。
 
 ## File Output
 
@@ -175,5 +177,6 @@ If the title is unknown, use a timestamped name such as:
 2. 将内容包写到作业的 `output_path`，通常为上游任务目录中的 `digests/<stable-key>/content-package.md`，而不是本 skill 默认的 `.video-summary-radar/outputs/` 路径。
 3. 保持本 skill 的固定 Markdown 章节、来源链接、字幕/转写来源、时间戳和质量限制说明。
 4. 不能下载、取得字幕或完成转写时，返回具体失败阶段与原因给上游；不要生成无来源的内容包。
+5. 批量任务只返回视频内容与证据，不逐条询问二次创作选项。
 
 本 skill 不做跨视频规律分析、爆款评分或账号选题推荐；这些任务由 `creator-intelligence` 根据多个内容包和采集证据完成。
