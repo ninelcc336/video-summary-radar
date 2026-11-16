@@ -45,9 +45,10 @@ class YouTubePublicAdapter:
     adapter_name = "public-yt-dlp"
 
     def collect(self, request: DiscoveryRequest, now: datetime) -> CollectionResult:
+        """匿名搜索公开视频，忽略可能注入 Cookie 或账号参数的用户配置。"""
         if shutil.which("yt-dlp") is None:
             return _unavailable(self.platform, self.adapter_name, "未检测到 yt-dlp", now)
-        command = ["yt-dlp", "--dump-json", f"ytsearch{request.limit}:{request.topic}"]
+        command = ["yt-dlp", "--ignore-config", "--dump-json", f"ytsearch{request.limit}:{request.topic}"]
         try:
             completed = subprocess.run(command, capture_output=True, check=False, text=True, timeout=30)
         except subprocess.TimeoutExpired:

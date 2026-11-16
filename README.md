@@ -27,6 +27,7 @@ npx skills add <github-owner>/video-summary-radar
 
 - 技能源码目录只读；虚拟环境、模型、缓存与结果默认位于调用项目的 `.video-summary-radar/`。
 - 首次使用只做依赖检查。安装 Python 包或下载模型必须由用户明确确认。
+- 视频采集默认匿名：先用公开元数据/字幕，需要页面交互时使用已确认隔离且未登录的浏览器。不连接个人 Chrome，不复用或自动导入个人登录态；失败时说明限制或使用本地视频/字幕，不自动切换到个人账号。
 - 不提交 `.video-summary-radar/`、密钥、Cookie、真实账号配置或真实任务输出。
 
 详见 [安装说明](docs/INSTALLATION.md)、[架构](docs/ARCHITECTURE.md) 与[贡献指南](docs/CONTRIBUTING.md)。

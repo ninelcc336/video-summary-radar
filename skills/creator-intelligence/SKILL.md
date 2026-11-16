@@ -1,6 +1,6 @@
 ---
 name: creator-intelligence
-description: 当用户要分析关注的创作者、寻找某个主题近期热门视频、生成爆款视频报告，或比较 B站、YouTube、抖音、小红书等平台的创作者内容表现时使用。用户要求批量蒸馏关注博主的视频、从多个视频提炼规律、结合自己的自媒体账号定位推荐可复刻爆款选题时，也必须使用此 skill 编排 video-content-digest。此 skill 优先通过已安装的 agent-reach 收集可验证的实时视频数据；缺失时先征询用户是否安装，若用户拒绝则只通过内置公共适配器处理可公开获取的平台，并在报告中透明标明无法抓取的平台与原因。
+description: 当用户要分析关注的创作者、寻找某个主题近期热门视频、生成爆款视频报告，或比较 B站、YouTube、抖音、小红书等平台的创作者内容表现时使用。用户要求批量蒸馏关注博主的视频、从多个视频提炼规律、结合自己的自媒体账号定位推荐可复刻爆款选题时，也必须使用此 skill 编排 video-content-digest。此 skill 优先通过已安装 agent-reach 的匿名入口收集可验证的实时视频数据；缺失时先征询用户是否安装，用户拒绝或后端无法匿名运行时使用内置公共适配器，并在报告中标明无法抓取的平台与原因。
 ---
 
 # Creator Intelligence
@@ -12,6 +12,13 @@ description: 当用户要分析关注的创作者、寻找某个主题近期热�
 
 不要把 `tests/fixtures/` 中的数据用于用户请求。它们只用于自动化测试。
 
+## 匿名采集边界
+
+- 单条、批量、账号公开主页及第三方下载页均只使用匿名公开入口。不连接个人 Chrome，不读取、复制或复用个人 Cookie、账号凭据、profile 或保存的认证状态。
+- Agent-Reach 可用不等于后端匿名。先阅读当前能力说明，排除会使用已有账号或从 Chrome/OpenCLI 自动复制登录态的后端；无法确认时跳过该后端，直接使用内置公共适配器，无需为此重新安装或登录。详情见 `references/platform-capabilities.md`。
+- 需要浏览器时，优先考虑已确认隔离且未登录的 Codex 内置浏览器；否则使用全新独立上下文/空配置目录，禁止自动连接个人 Chrome 和恢复账号状态。无法建立隔离就跳过浏览器路线，说明限制。
+- 获取失败不自动切回个人浏览器或请求登录；普通登录提示可尝试其他匿名入口，验证码、明确风控或限流则停止该平台请求，不换后端连续尝试。保留失败状态，继续其他作业或平台；必要时请用户提供本地视频/导出字幕。
+
 ## 运行前检查
 
 先运行，不安装任何依赖：
@@ -22,13 +29,13 @@ python <skill_path>/scripts/check_environment.py --json
 
 按结果选择入口：
 
-1. `agent_reach.state` 为 `available`：优先使用 Agent-Reach。
+1. `agent_reach.state` 为 `available`：仅优先使用经确认符合匿名边界的 Agent-Reach 后端；目标后端会复用登录态或无法确认时，直接使用内置公共适配器。
 2. `agent-reach` 不可用：先向用户明确询问：
 
    > 未检测到可用的 Agent-Reach。是否需要安装它以获取更完整的多平台真实数据？
 
    用户同意后，遵循 `references/installation.md` 的官方安装流程；安装完成后重新执行检查。未经同意不得安装。
-3. 用户拒绝安装：使用内置公共适配器。它仅支持当前环境中能合法公开访问的平台；其余平台必须记录为无法抓取，不能用样例、估算值或无来源链接补位。
+3. 用户拒绝安装或目标后端不符合匿名边界：使用内置公共适配器。它仅支持当前环境中能合法匿名访问的平台；其余平台必须记录为无法抓取，不能用样例、估算值或无来源链接补位。
 
 ## 数据采集
 
@@ -40,7 +47,7 @@ python <skill_path>/scripts/check_environment.py --json
 
 ### Agent-Reach 路径
 
-阅读 `references/platform-capabilities.md` 中对应平台的说明，再调用当前 Agent-Reach 环境实际可用的只读命令。保留原始链接、发布时间、播放/互动指标与抓取时间。
+阅读 `references/platform-capabilities.md` 和当前 Agent-Reach 的能力说明，再调用经确认实际可用且不会复用/自动导入个人登录态的匿名只读命令；不能仅凭“只读”或“专用浏览器”判定匿名。保留原始链接、发布时间、播放/互动指标与抓取时间。
 
 将结果归一化为 `references/data-schema.md` 定义的 collection JSON，写入 `.video-summary-radar/outputs/collection.json`，再运行：
 
@@ -52,7 +59,7 @@ python <skill_path>/scripts/run_report.py --range 7d --input .video-summary-rada
 
 ### 内置公共适配器路径
 
-用户拒绝安装 Agent-Reach 后，对 discovery 请求运行：
+用户拒绝安装 Agent-Reach 或目标后端不符合匿名边界时，对 discovery 请求运行：
 
 ```bash
 python <skill_path>/scripts/collect_public.py \
@@ -63,7 +70,7 @@ python <skill_path>/scripts/collect_public.py \
 python <skill_path>/scripts/run_report.py --range 7d --input .video-summary-radar/outputs/collection.json
 ```
 
-- YouTube 使用本机已安装的 `yt-dlp` 搜索公开结果。
+- YouTube 使用本机已安装的 `yt-dlp --ignore-config` 搜索公开结果，不加载用户配置中的 Cookie 或登录参数。
 - B站使用公开搜索接口；接口受限、失败或字段不完整时会写入限制。
 - 抖音、小红书没有稳定、无登录的内置公共发现入口，必须在报告中标为无法抓取。
 - watchlist 模式下，如果公共入口无法依据配置中的账号标识可靠验证创作者身份，标记该创作者无法抓取，不用关键词猜测替代。
@@ -93,6 +100,7 @@ python <skill_path>/scripts/prepare_digest_batch.py --collection .video-summary-
 1. 仅处理作业指定的 `url`。
 2. 将固定格式内容包写到该作业的 `output_path`，例如 `digests/youtube-abc/content-package.md`。
 3. 保留来源链接、字幕来源、时间戳和质量限制。无法取得内容包时，不得补造内容；记录失败原因，继续其他作业。
+4. 各作业遵守同一匿名采集边界，不因某条失败而借用个人浏览器或导入账号状态。
 
 每条作业由 `platform:video_id` 稳定关联，不得用标题匹配。不要复制 `video-content-digest` 的下载、音频提取或转写逻辑。
 
@@ -120,7 +128,7 @@ python <skill_path>/scripts/run_content_strategy.py --run-dir .video-summary-rad
 3. 爆款规律分析：少于 5 条数据时只说明样本不足，不下规律结论。
 4. 数据覆盖与限制：逐平台列出数据入口、状态、数量、采集时间和失败原因。
 
-每条视频必须保留来源适配器、采集时间、指标可用性和数据限制。不要虚构播放量、互动数据、发布时间或来源链接。
+每条视频必须保留来源适配器、采集时间、指标可用性和数据限制。报告的数据覆盖部分简要注明实际匿名获取方式，并记录因登录要求、隔离无法确认或平台拦截而跳过的入口与原因。不要虚构播放量、互动数据、发布时间或来源链接。
 
 ## 配置格式
 

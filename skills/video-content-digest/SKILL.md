@@ -19,12 +19,12 @@ Prefer factual extraction over creative invention. Keep source evidence separate
 ## Workflow
 
 1. Identify the input with `scripts/resolve_video.py` and read `references/platform-notes.md`.
-2. For URL inputs, inspect available browser-capable tools, plugins, and skills before considering local transcription. When present, prefer the following evidence order:
-   - browser access using the user's existing session (for example Codex Chrome, `agent-browser`, or `agent-reach`), limited to visible public page content, captions, chapters, descriptions, key frames, and playable content;
-   - public page metadata and subtitles via `yt-dlp`;
-   - when browser and public subtitle access cannot sufficiently recover the main content of a Bilibili or Douyin video, use the PeanutDL fallback in `references/platform-notes.md`: [Bilibili](https://peanutdl.com/zh/bilibili) or [Douyin](https://peanutdl.com/zh/douyin);
+2. For URL inputs, use anonymous retrieval by default, in this evidence order:
+   - public metadata and subtitles through unauthenticated HTTP/tools or `yt-dlp --ignore-config`, without cookies, account credentials, or browser-session imports;
+   - when page interaction, playback, or visual evidence is needed, use an isolated, unsigned-in browser. Prefer the Codex built-in browser when its session isolation is established; otherwise launch a fresh independent browser context/profile. Follow the browser selection rules in `references/platform-notes.md`;
+   - when anonymous page and public subtitle access cannot sufficiently recover the main content of a Bilibili or Douyin video, use the PeanutDL fallback in the same isolated browser: [Bilibili](https://peanutdl.com/zh/bilibili) or [Douyin](https://peanutdl.com/zh/douyin);
    - use the downloaded or user-provided local video for audio extraction and FunASR transcription when the main content still needs recovery.
-   Do not inspect cookies or session stores, bypass login/access controls, or perform social actions. A login prompt on the source page does not end retrieval of an otherwise public video: try available public subtitle and PeanutDL paths first. If the source itself requires private, paid, or authorized access, ask the user to sign in or provide a local file/subtitle export.
+   Never connect to the user's everyday Chrome, reuse/import personal cookies or saved auth state, or use a backend that automatically copies their login. This applies to tools such as Agent-Reach/OpenCLI as well as direct browser access; a dedicated browser or read-only command alone does not establish anonymous access. If isolation cannot be established, skip that route and record why. Retrieval failures must not trigger a switch to a personal browser or an automatic login request. A generic login prompt on an otherwise public page allows other anonymous routes; if the content itself requires authorization, request a local file/subtitle export instead. Stop requests to a platform on a CAPTCHA, explicit risk-control block, or rate limit rather than switching browsers/backends to retry it. Do not bypass access controls or perform social actions.
 3. Build an evidence inventory before writing: title/description, subtitles or ASR, chapter summaries, and necessary visual evidence such as slides, code, UI steps, charts, or before/after states. Resolve conflicts with this priority: clear visual original text or clear speech > human subtitles > automatic subtitles or ASR > page chapter summaries. Record unresolved conflicts instead of silently merging them.
 4. Use local transcription only if the evidence inventory cannot recover the main content. Treat less than roughly 60% usable coverage of the main content as insufficient.
    - For Bilibili and Douyin URLs, try the PeanutDL download fallback before asking the user for a local video; downloading alone does not mean the content has been read. Follow it with audio transcription and necessary visual extraction.
@@ -123,7 +123,7 @@ Transcribe extracted audio:
 Optional URL preparation with `yt-dlp`:
 
 ```powershell
-yt-dlp --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o ".video-summary-radar/outputs/%(title).200s/%(title).200s.%(ext)s" "<video-url>"
+yt-dlp --ignore-config --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o ".video-summary-radar/outputs/%(title).200s/%(title).200s.%(ext)s" "<video-url>"
 ```
 
 ## Transcript Rules
@@ -178,5 +178,6 @@ If the title is unknown, use a timestamped name such as:
 3. 保持本 skill 的固定 Markdown 章节、来源链接、字幕/转写来源、时间戳和质量限制说明。
 4. 不能下载、取得字幕或完成转写时，返回具体失败阶段与原因给上游；不要生成无来源的内容包。
 5. 批量任务只返回视频内容与证据，不逐条询问二次创作选项。
+6. 每条作业与上游采集均遵守匿名获取边界；不得因批量作业失败而切换到个人 Chrome、共享登录态或自动导入账号的后端。
 
 本 skill 不做跨视频规律分析、爆款评分或账号选题推荐；这些任务由 `creator-intelligence` 根据多个内容包和采集证据完成。
