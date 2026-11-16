@@ -7,10 +7,7 @@ description: 获取 YouTube、B站、抖音、TikTok、通用视频链接或本�
 
 ## Purpose
 
-只负责获取并忠实整理单个视频的内容，包括字幕、口播、必要画面和来源信息。交付结果让读者不看原视频也能理解其内容；不承担文案改写、传播策略或发布。默认内容包有两个阅读层次：
-
-- 结论速览：约一分钟读完的问题、结论、方法、证据和限制。
-- 完整内容还原：按主题和论证逻辑重组口播、字幕与必要画面信息，不机械复述镜头顺序。
+只负责获取并忠实整理单个视频的内容，包括字幕、口播、必要画面和来源信息。交付结果让读者不看原视频也能理解其内容；不承担文案改写、传播策略或发布。默认落盘两份面向读者的产物：`口播稿.txt` 忠实保留原始表达；`视频总结.md` 先整体概括，再解释最值得保留的内容，并展开必要论据。中间资料统一放进 `处理资料/`。除非用户明确只要某一种格式，否则无需额外询问是否保存文件。
 
 获取完成后，可提供“仅保留视频内容（默认） / 微信公众号文案 / 小红书文案 / 其他形式”的后续选项。用户未选择时，交付内容包即完成任务；用户已明确指定创作形式时，直接把内容包作为后续独立创作任务的输入，不重复询问。本 skill 的交付物始终只包含视频内容与证据。
 
@@ -26,22 +23,22 @@ Prefer factual extraction over creative invention. Keep source evidence separate
    - use the downloaded or user-provided local video for audio extraction and FunASR transcription when the main content still needs recovery.
    Never connect to the user's everyday Chrome, reuse/import personal cookies or saved auth state, or use a backend that automatically copies their login. This applies to tools such as Agent-Reach/OpenCLI as well as direct browser access; a dedicated browser or read-only command alone does not establish anonymous access. If isolation cannot be established, skip that route and record why. Retrieval failures must not trigger a switch to a personal browser or an automatic login request. A generic login prompt on an otherwise public page allows other anonymous routes; if the content itself requires authorization, request a local file/subtitle export instead. Stop requests to a platform on a CAPTCHA, explicit risk-control block, or rate limit rather than switching browsers/backends to retry it. Do not bypass access controls or perform social actions.
 3. Build an evidence inventory before writing: title/description, subtitles or ASR, chapter summaries, and necessary visual evidence such as slides, code, UI steps, charts, or before/after states. Resolve conflicts with this priority: clear visual original text or clear speech > human subtitles > automatic subtitles or ASR > page chapter summaries. Record unresolved conflicts instead of silently merging them.
-4. Use local transcription only if the evidence inventory cannot recover the main content. Treat less than roughly 60% usable coverage of the main content as insufficient.
+4. Use local transcription only if the evidence inventory cannot recover the main content. Record the actual acquired time spans and gaps. Page metadata or AI chapters alone never establish full speech coverage; do not invent numerical coverage estimates.
    - For Bilibili and Douyin URLs, try the PeanutDL download fallback before asking the user for a local video; downloading alone does not mean the content has been read. Follow it with audio transcription and necessary visual extraction.
    - Then check dependencies with `scripts/check_env.py --mode chinese`.
    - The bootstrap prerequisite is Python 3.10 or newer. If Python is missing, explain that the user must install it from the official Python distribution before continuing.
    - The checker is read-only unless `--install` is explicitly provided after user confirmation.
    - All Python packages, models, cache files, configuration, and the manifest are stored under `<workspace>/.video-summary-radar/runtime/`. Never write to the installed skill directory or the system Python.
    - The only transcription backend is FunASR Chinese mode. `ffmpeg` is checked but never installed or uninstalled by this skill, and FunASR models are never downloaded automatically.
-   - If the user declines the required installation or files, deliver all reliable evidence and a `待确认信息` section rather than inventing missing content.
+   - If the user declines the required installation or files, deliver all reliable evidence and a `内容缺口与来源` section rather than inventing missing content.
 5. If the user asks to uninstall or delete this skill:
    - Report the exact `<workspace>/.video-summary-radar/runtime/` paths first.
    - Do not automatically delete the runtime, models, cache, configuration, or project files.
    - Offer manual deletion commands for `<workspace>/.video-summary-radar/runtime/venv`, `cache`, `config`, and `manifest.json`.
    - Preserve `<workspace>/.video-summary-radar/runtime/models/` and workspace outputs unless the user separately requests their deletion.
    - `ffmpeg` is managed separately by the system package manager and is never removed by this skill.
-6. Normalize subtitles or transcripts with `scripts/normalize_transcript.py`. Save the normalized transcript as a local companion artifact even when it is not displayed in the main package.
-7. Read `references/output-templates.md` before writing the final output.
+6. Prepare the stable output directory with `scripts/prepare_output.py` after confirming the video identity. Normalize real subtitles or ASR with `scripts/normalize_transcript.py`; keep timed JSON in `处理资料/`, export `--format txt` for the speech draft, then correct only confirmed recognition/punctuation errors. This script does not extract speech from report Markdown: isolate and review its actual speech first. Never feed a summary or page chapters into transcript export.
+7. Read `references/output-templates.md` before writing the final output. Add title/category/tags/summary metadata following `references/retrieval.md`, then run `scripts/index_outputs.py` to refresh the output index after delivery. Reuse existing tag names; never insert metadata into the pure speech TXT.
 8. Read `references/quality-checklist.md` before finalizing. Deliver the available video content before offering optional follow-up creation; do not block retrieval or delivery on a platform-copy choice.
 
 ## Runtime and Commands
@@ -104,80 +101,82 @@ python scripts/resolve_video.py "<video-url-or-local-path>"
 Extract audio from a local video:
 
 ```powershell
-python scripts/extract_audio.py "<video-file>" --output .video-summary-radar/outputs/audio.wav
+python scripts/extract_audio.py "<video-file>" --output <视频目录>/处理资料/audio.wav
 ```
 
 Normalize subtitles:
 
 ```powershell
-python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output .video-summary-radar/outputs/transcript.md --format md
-python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output .video-summary-radar/outputs/transcript.json --format json
+python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output <视频目录>/处理资料/transcript.md --format md
+python scripts/normalize_transcript.py "<subtitle-or-transcript-file>" --output <视频目录>/处理资料/transcript.json --format json
 ```
 
 Transcribe extracted audio:
 
 ```powershell
-<workspace>\.video-summary-radar\runtime\venv\Scripts\python.exe scripts/transcribe.py .video-summary-radar/outputs/audio.wav --backend chinese --output .video-summary-radar/outputs/transcript.json --format json
+<workspace>\.video-summary-radar\runtime\venv\Scripts\python.exe scripts/transcribe.py <视频目录>/处理资料/audio.wav --backend chinese --output <视频目录>/处理资料/transcript.json --format json
 ```
 
 Optional URL preparation with `yt-dlp`:
 
 ```powershell
-yt-dlp --ignore-config --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o ".video-summary-radar/outputs/%(title).200s/%(title).200s.%(ext)s" "<video-url>"
+yt-dlp --ignore-config --write-info-json --write-auto-subs --write-subs --sub-langs "zh.*,en.*" --skip-download -o "<视频目录>/处理资料/%(id)s.%(ext)s" "<video-url>"
 ```
 
 ## Transcript Rules
 
 - Prefer human-created subtitles over auto-generated subtitles.
-- Prefer Chinese subtitles. If only English subtitles exist, translate the final content into Chinese and mention that the source transcript was English.
-- Preserve timestamps whenever possible.
+- Prefer Chinese subtitles. Preserve the original speech language in `口播稿.txt`; write the report in Chinese and disclose any translation. Translations are separate optional artifacts, never presented as the original speech.
+- Preserve timestamps in evidence JSON/Markdown whenever possible; omit them from the pure TXT.
 - Keep the raw or normalized transcript as a local evidence file, but do not make it the default reading experience. The main package must be a semantic reconstruction.
 - If transcript quality is poor, say so briefly in the final output and avoid overconfident claims.
 - For slide, code, chart, UI, or comparison-heavy videos, capture and describe only the visual details required to understand the argument. Attach 3-8 key frames only when text description would lose essential information.
-- If the main content remains unavailable after applicable browser, subtitle, PeanutDL download, and local transcription attempts, return the reliable evidence plus `待确认信息`. State the failed stage and reason, and request only the missing local file, subtitles, visual evidence, or transcription setup. Do not present a title or description as recovered video content.
+- If the main content remains unavailable after applicable browser, subtitle, PeanutDL download, and local transcription attempts, return the reliable evidence plus `内容缺口与来源`. State the failed stage and reason, and request only the missing local file, subtitles, visual evidence, or transcription setup. Do not present a title or description as recovered video content.
 
 ## Final Output Rules
 
-Use Chinese by default and follow the exact section order from `references/output-templates.md` unless the user requests another format. Organize the main reconstruction by problem, conclusion, method, evidence/case, and limitation; use timestamps only as evidence markers, never as an instruction to replay the video.
-
-The package must let a reader answer, without watching the source: what problem the video addresses, its conclusion, how it argues or demonstrates the conclusion, what evidence it uses, and what remains uncertain.
-
-For quotes, preserve original wording and attach an evidence time only when it materially helps provenance. If lightly polished, do not change the meaning.
-
-只整理视频已有的结论、步骤、案例与限制，不加入选题推荐、传播效果预测、平台文案或二次剪辑方案。可在内容包之外提供后续创作选项；具体文案由用户选定后的独立任务处理，复用已保存的内容与证据，无需重新获取视频。
+Follow `references/output-templates.md` and its fixed five report sections. The report must explain the problem, overall conclusion, supporting examples/reasoning, the most valuable material and its limits without requiring video playback. 时间戳仅用于溯源。Value judgments are AI editorial selection: distinguish them from the author's claims. Do not invent facts, prescriptions, audience hooks or interaction prompts.
 
 ## File Output
 
-When the user wants files, save Markdown to:
+默认在调用者工作区保存：
 
 ```text
-.video-summary-radar/outputs/<safe-video-title>-content-package.md
+.video-summary-radar/outputs/视频标题__平台-视频ID/
+├── 口播稿.txt
+├── 视频总结.md
+└── 处理资料/
+    ├── 视频信息.json
+    └── 字幕、带时间戳转录、媒体、截图、日志等
 ```
 
-Also save transcript files when generated:
+确认 URL 的平台、视频 ID 及分 P 后执行（从实际工作区运行，脚本使用安装位置的绝对路径）：
 
-```text
-.video-summary-radar/outputs/<safe-video-title>-transcript.md
-.video-summary-radar/outputs/<safe-video-title>-transcript.json
+```powershell
+python <skill-path>/scripts/prepare_output.py --title "视频标题" --platform douyin --video-id 7700609860844473663 --url "<video-url>"
+python <skill-path>/scripts/normalize_transcript.py "<视频目录>/处理资料/transcript.json" --output "<视频目录>/口播稿.txt" --format txt
 ```
 
-The transcript is an evidence companion, not a substitute for the content package. When visual evidence is essential, save the selected key frames beside the package and link them from `关键画面与操作`.
+- `prepare_output.py` 返回目录和交付路径。标题非法字符替换为下划线，截到 60 字；身份由平台+ID+可选 `--part` 确定，同一父目录下重复解析复用第一次的目录名，不因标题更新或日期变化另建目录。
+- 本地视频用 `--local-file "<path>" --title "标题"`，脚本用文件内容 SHA-256 的前 20 位标识；路径改变但字节相同仍复用目录。已知在线来源时优先使用在线身份。未知 URL 身份时先解析，不用时间戳冒充视频身份。
+- 已有交付默认保留；内容相同可重复导出。新版本先写到 `处理资料/口播稿候选.txt`、`处理资料/视频总结候选.md`；对比后仅在用户明确要求更新原稿时替换。TXT 脚本的 `--overwrite` 仅用于已授权替换，不自动启用。
+- 首次解析必须真实取得口播才生成 TXT；无口播或正文未取得时不生成空白/伪造 TXT，在报告的处理状态和缺口中说明。部分转录可保存 TXT，但报告明确标注已取得的范围及缺段，不能称完整口播。
+- 处理状态固定为 `已解析`、`部分解析` 或 `未取得正文`。完成度依据实际证据范围，不写未测量的百分比；画面必要但缺失也属于部分解析。
+- 历史文件先列迁移清单，再按真实证据归整；保留原文和处理记录在 `处理资料/`，修复索引与相对链接。仅有标题或页面 AI 章节不能补造口播。
 
-If the title is unknown, use a timestamped name such as:
+## 已有产物检索
 
-```text
-.video-summary-radar/outputs/video-content-YYYYMMDD-HHMMSS.md
-```
+查找已解析的视频时，先读调用工作区 `.video-summary-radar/outputs/产物索引.md`，按标签、标题、摘要、作者筛选，再读命中的总结；需要精确引用才读口播，必要时核对处理资料。只读查询可用 `scripts/index_outputs.py --query "关键词"`。明确指定忽略工作区中的路径，避免普通仓库搜索漏掉产物；索引维护和全文查找见 `references/retrieval.md`。
 
 ## 批量任务协作
 
-当上游 `creator-intelligence` 提供 `digest-jobs.json` 时，仍按单视频流程处理每条作业：
+上游 `creator-intelligence` 提供 `digest-jobs.json` 时，按相同单视频标准处理：
 
-1. 只处理作业中的 `url`，不根据标题搜索替代视频。
-2. 将内容包写到作业的 `output_path`，通常为上游任务目录中的 `digests/<stable-key>/content-package.md`，而不是本 skill 默认的 `.video-summary-radar/outputs/` 路径。
-3. 保持本 skill 的固定 Markdown 章节、来源链接、字幕/转写来源、时间戳和质量限制说明。
-4. 不能下载、取得字幕或完成转写时，返回具体失败阶段与原因给上游；不要生成无来源的内容包。
-5. 批量任务只返回视频内容与证据，不逐条询问二次创作选项。
-6. 每条作业与上游采集均遵守匿名获取边界；不得因批量作业失败而切换到个人 Chrome、共享登录态或自动导入账号的后端。
+1. 只处理作业 URL，不根据标题搜索替代视频。
+2. 新作业的 `output_path` 为 `digests/视频标题__平台-视频ID/视频总结.md`；在其旁保存 `口播稿.txt` 和 `处理资料/`。以作业给定路径为准；历史 `content-package.md` 路径仍可读取，不擅自重命名已有批次。
+3. 对新目录可用 `prepare_output.py --output-root "<任务目录>/digests"` 建立身份记录；随后使用返回路径，确保与作业目录一致。
+4. 取得部分内容可以交付有明确状态的总结；将失败阶段、缺失范围及原因返回上游，不能冒充已成功完整解析。批量索引链接实际存在的交付。
+5. 每份总结包含相同检索元数据，完成后以整个产物根目录重建索引，使批次内的视频也可被统一查到。自定义批次在默认 outputs 外时用其父目录作为 --output-root。批量只返回视频内容与证据，不逐条询问二次创作选项。
+6. 所有采集继续遵守匿名边界，失败不得切换到个人 Chrome、共享登录态或自动导入账号的后端。
 
-本 skill 不做跨视频规律分析、爆款评分或账号选题推荐；这些任务由 `creator-intelligence` 根据多个内容包和采集证据完成。
+本 skill 不做跨视频规律分析、爆款评分或账号选题推荐；这些由 `creator-intelligence` 根据多个总结和采集证据完成。

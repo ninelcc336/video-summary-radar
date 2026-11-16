@@ -111,8 +111,10 @@ def test_cli_creates_and_analyzes_digest_run(tmp_path: Path, sample_video, now: 
     job = manifest.jobs[0]
     package = run_dir / job.package_path
     package.parent.mkdir(parents=True)
+    assert package.name == "视频总结.md"
+    assert sample_video.title in package.parent.name
     package.write_text(
-        "### 选题角度\nAI 工具实操\n\n### 开头钩子\n00:03 先看误区\n\n### 内容结构\n问题到案例\n\n### 视频爆点\n反常识\n\n### 互动引导\n评论讨论\n\n### 时间线\n00:03 钩子\n",
+        "## 视频信息\n- 处理状态：已解析\n\n## 整体概括\nAI 工具实操\n\n## 最有价值的部分\n反常识及其案例\n\n## 核心内容与必要展开\n问题到案例\n\n## 内容缺口与来源\n完整音频与抽帧，无已知缺段\n",
         encoding="utf-8",
     )
     completed = subprocess.run([sys.executable, str(STRATEGY_SCRIPT), "--run-dir", str(run_dir)], capture_output=True, text=True)
@@ -121,6 +123,17 @@ def test_cli_creates_and_analyzes_digest_run(tmp_path: Path, sample_video, now: 
     for heading in ("批量蒸馏索引", "创作者与样本规律", "可复刻爆款选题池", "优先级行动清单", "数据覆盖与限制"):
         assert f"## {heading}" in report
     assert json.loads((run_dir / "analysis.json").read_text(encoding="utf-8"))["recommendations"]
+    assert "[视频总结](digests/" in report
+    payload = json.loads(collection.read_text(encoding="utf-8"))
+    payload["videos"][0]["title"] = "更改标题"
+    collection.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    repeated = subprocess.run([sys.executable, str(PREPARE_SCRIPT), "--collection", str(collection), "--profile", str(profile),
+                               "--output-dir", str(run_dir)], capture_output=True, text=True)
+    assert repeated.returncode == 0, repeated.stderr
+    same_job = load_manifest(run_dir / "digest-manifest.json").jobs[0]
+    assert same_job.package_path == job.package_path
+    assert same_job.state == "succeeded"
+
 
 
 def test_skill_docs_describe_batch_contract() -> None:
@@ -131,3 +144,21 @@ def test_skill_docs_describe_batch_contract() -> None:
         assert value in creator_text
     assert "单视频" in digest_text
     assert "content-package.md" in digest_text
+
+
+def test_new_summary_uses_evidence_without_inventing_features(tmp_path, sample_ranked_videos, now):
+    """新版总结可供策略读取，但缺失的钩子、互动和时间线保持为空。"""
+    job = select_digest_jobs(sample_ranked_videos, "top", 1, now)[0]
+    path = tmp_path / "视频总结.md"
+    text = "## 视频信息\n- 处理状态：已解析\n\n## 整体概括\n作者观点\n\n## 最有价值的部分\n重要论证\n\n## 核心内容与必要展开\n### 案例\n案例细节\n\n## 内容缺口与来源\n本地字幕\n"
+    text = '---\ntitle: "测试视频"\ncategory: "AI内容创作"\ntags: ["工具", "案例", "方法"]\nsummary: "测试摘要"\n---\n\n' + text
+    path.write_text(text, encoding="utf-8")
+    feature = parse_content_package(job, path)
+    assert feature.topic_angle == "作者观点"
+    assert feature.highlights == "重要论证"
+    assert "案例细节" in feature.structure
+    assert feature.hook == feature.interaction == feature.timeline == ""
+    assert feature.completeness == 1.0
+    path.write_text(text.replace("已解析", "部分解析"), encoding="utf-8")
+    with pytest.raises(ValueError, match="部分解析"):
+        parse_content_package(job, path)

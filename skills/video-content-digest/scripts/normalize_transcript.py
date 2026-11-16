@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Normalize SRT, VTT, or plain transcript files into Markdown or JSON."""
+"""Normalize SRT, VTT, plain text, or ASR JSON into TXT, Markdown, or JSON."""
 
 from __future__ import annotations
 
@@ -70,26 +70,16 @@ def parse_transcript(path: Path) -> list[dict]:
     """Parse supported subtitle text or the JSON emitted by the local ASR runner."""
     content = path.read_text(encoding="utf-8", errors="replace")
     if path.suffix.lower() == ".json":
-        try:
-            raw_segments = json.loads(content)
-        except json.JSONDecodeError:
-            raw_segments = None
-        if isinstance(raw_segments, list):
-            segments = []
-            for item in raw_segments:
-                if not isinstance(item, dict):
-                    continue
-                text = clean_text([str(item.get("text") or "")])
-                if text:
-                    segments.append(
-                        {
-                            "start": str(item.get("start") or ""),
-                            "end": str(item.get("end") or ""),
-                            "text": text,
-                        }
-                    )
-            if segments:
-                return segments
+        raw_segments = json.loads(content)
+        if not isinstance(raw_segments, list) or any(
+            not isinstance(item, dict) or not isinstance(item.get("text"), str) for item in raw_segments
+        ):
+            raise ValueError("转录 JSON 必须为包含 text 字符串的分段列表，不能使用页面信息或摘要")
+        return [
+            {"start": str(item.get("start") or ""), "end": str(item.get("end") or ""),
+             "text": clean_text([item["text"]])}
+            for item in raw_segments if item["text"].strip()
+        ]
     segments = parse_timed_blocks(content)
     if segments:
         return segments
@@ -108,20 +98,29 @@ def to_markdown(segments: list[dict]) -> str:
 
 
 def main() -> int:
+    """导出逐段转录；默认拒绝覆盖不同内容，空转录不生成稿件。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", help="SRT, VTT, or plain text transcript")
     parser.add_argument("--output", required=True, help="Output file path")
-    parser.add_argument("--format", choices=["json", "md"], default="md")
+    parser.add_argument("--format", choices=["json", "md", "txt"], default="md")
+    parser.add_argument("--overwrite", action="store_true", help="明确允许替换已有文件")
     args = parser.parse_args()
 
     segments = parse_transcript(Path(args.input).expanduser().resolve())
+    if not segments:
+        parser.error("没有可导出的转录文本")
     output = Path(args.output).expanduser().resolve()
-    output.parent.mkdir(parents=True, exist_ok=True)
 
     if args.format == "json":
-        output.write_text(json.dumps(segments, ensure_ascii=False, indent=2), encoding="utf-8")
+        rendered = json.dumps(segments, ensure_ascii=False, indent=2)
+    elif args.format == "txt":
+        rendered = "\n\n".join(segment["text"] for segment in segments) + "\n"
     else:
-        output.write_text(to_markdown(segments), encoding="utf-8")
+        rendered = to_markdown(segments)
+    if output.exists() and output.read_text(encoding="utf-8") != rendered and not args.overwrite:
+        parser.error("已有文件内容不同；请写入处理资料中的候选稿，或确认替换后使用 --overwrite")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(rendered, encoding="utf-8")
 
     print(str(output))
     return 0

@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
+from pathlib import PurePosixPath
+from urllib.parse import quote
+
 from creator_intelligence.models import DigestManifest, TopicRecommendation
 from creator_intelligence.strategy import StrategyResult
 
 
 def render_strategy_report(manifest: DigestManifest, result: StrategyResult) -> str:
-    """生成包含蒸馏索引、规律、推荐和限制的固定章节报告。"""
+    """生成固定章节报告，仅为成功作业提供可点击的交付索引。"""
     lines = [
         "# 创作者内容策略报告",
         "",
@@ -20,7 +25,7 @@ def render_strategy_report(manifest: DigestManifest, result: StrategyResult) -> 
         "| --- | --- | --- | --- | --- | --- |",
     ]
     for job in manifest.jobs:
-        package = job.package_path or "-"
+        package = f"[视频总结]({quote(job.package_path)})" if job.package_path and job.state == "succeeded" else "-"
         reason = job.failure_reason or "-"
         lines.append(
             f"| {_escape(job.video.title)} | {job.video.platform} | {job.video.views:,} 播放 | {job.state} | {_escape(package)} | {_escape(reason)} |"

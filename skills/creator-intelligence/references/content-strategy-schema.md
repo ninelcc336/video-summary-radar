@@ -29,7 +29,7 @@
     {
       "stable_video_key": "youtube:abc123",
       "state": "pending",
-      "package_path": "digests/youtube-abc123/content-package.md",
+      "package_path": "digests/示例视频__youtube-abc123/视频总结.md",
       "failure_stage": "",
       "failure_reason": "",
       "updated_at": "2026-07-21T12:00:00+00:00",
@@ -56,7 +56,9 @@
       "title": "示例",
       "platform": "youtube",
       "state": "pending",
-      "output_path": "digests/youtube-abc123/content-package.md"
+      "output_path": "digests/示例视频__youtube-abc123/视频总结.md",
+      "transcript_path": "digests/示例视频__youtube-abc123/口播稿.txt",
+      "materials_path": "digests/示例视频__youtube-abc123/处理资料"
     }
   ]
 }
@@ -88,3 +90,5 @@
 ```
 
 推荐分数由近期热度、可复刻性、账号匹配度、证据完整度组成。低样本或章节缺失会降低置信度，不能将评分表述为确定的流量预测。
+
+新作业在总结旁保存 `口播稿.txt` 与 `处理资料/`，沿用 video-content-digest 的统一五章节规范。重复准备同批次保留既有目录与作业状态；标题更新不会另建目录。报告索引链接视频总结。部分解析不计入完整蒸馏成功样本；缺失的开头钩子、互动和时间线不得推断。历史 content-package.md 及六章节内容包仍可读取。

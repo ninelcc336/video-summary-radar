@@ -23,6 +23,14 @@ npx skills add <github-owner>/video-summary-radar
 
 所有 skill 都以 `SKILL.md` 为跨平台入口。当前不维护各 Agent 的专用适配层或市场插件。
 
+## 默认视频产物
+
+每条视频默认保存到 `.video-summary-radar/outputs/视频标题__平台-视频ID/`：`口播稿.txt` 保留原始表达，`视频总结.md` 包含整体概括、最有价值的部分、必要展开与来源缺口；字幕、媒体、截图和日志统一放在 `处理资料/`。
+
+相同视频重复解析沿用首次目录名，已有稿件默认保留。只取得页面章节时标为部分解析，不补造口播稿。单视频和批量任务使用同一规范，批次另提供可点击索引。
+
+视频总结顶部保存分类、3–8 个标签和一句话摘要。交付后运行 `skills/video-content-digest/scripts/index_outputs.py` 生成带分类、标签、摘要和链接的 `产物索引.md`，Agent 先筛索引再读取总结；`--query "关键词"` 可只读查询。脚本从调用工作区读取默认 outputs，自定义位置使用 `--output-root`。规则见 [产物标签与检索](skills/video-content-digest/references/retrieval.md)。
+
 ## 运行时与隐私 / Runtime and privacy
 
 - 技能源码目录只读；虚拟环境、模型、缓存与结果默认位于调用项目的 `.video-summary-radar/`。
@@ -31,6 +39,12 @@ npx skills add <github-owner>/video-summary-radar
 - 不提交 `.video-summary-radar/`、密钥、Cookie、真实账号配置或真实任务输出。
 
 详见 [安装说明](docs/INSTALLATION.md)、[架构](docs/ARCHITECTURE.md) 与[贡献指南](docs/CONTRIBUTING.md)。
+
+## 本地开发与使用
+
+可以在同一仓库中修改 Skill 并运行个人任务：源码保留在 `skills/`，使用工作区放在 `local-workspaces/<工作区名称>/`，其环境和结果保存在工作区内的 `.video-summary-radar/`。整个 `local-workspaces/` 由 Git 忽略。
+
+在仓库根目录开发时，实际采集、下载和转写命令仍以对应使用工作区为当前目录；源码测试在仓库根目录运行。需要 Agent 自动发现源码技能时，可在本机 `.agents/skills/` 中建立到 `skills/<skill-name>/` 的目录联接或符号链接；这些本机入口不提交，不复制源码。
 
 ## 生命周期与发布 / Lifecycle and releases
 

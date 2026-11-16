@@ -87,7 +87,7 @@ python <skill_path>/scripts/run_report.py --range 7d --input .video-summary-rada
 4. 创建任务目录：
 
 ```powershell
-python <skill_path>/scripts/prepare_digest_batch.py --collection .video-summary-radar/outputs/collection.json --profile account-profile.json --range 7d --mode top --limit 10 --output-dir .video-summary-radar/outputs/content-strategy
+python <skill_path>/scripts/prepare_digest_batch.py --collection .video-summary-radar/outputs/collection.json --profile account-profile.json --range 7d --mode top --limit 10 --output-dir .video-summary-radar/outputs/创作者名__近7天视频
 ```
 
 - 默认使用 `top`，仅在用户明确要求全量蒸馏时使用 `--mode all`。
@@ -98,7 +98,7 @@ python <skill_path>/scripts/prepare_digest_batch.py --collection .video-summary-
 读取 `digest-jobs.json`，对每个 `pending` 作业调用 `video-content-digest`：
 
 1. 仅处理作业指定的 `url`。
-2. 将固定格式内容包写到该作业的 `output_path`，例如 `digests/youtube-abc/content-package.md`。
+2. 将固定格式内容包写到该作业的 `output_path`，例如 `digests/示例视频__youtube-abc/视频总结.md`。
 3. 保留来源链接、字幕来源、时间戳和质量限制。无法取得内容包时，不得补造内容；记录失败原因，继续其他作业。
 4. 各作业遵守同一匿名采集边界，不因某条失败而借用个人浏览器或导入账号状态。
 
@@ -109,7 +109,7 @@ python <skill_path>/scripts/prepare_digest_batch.py --collection .video-summary-
 完成可用作业后运行：
 
 ```powershell
-python <skill_path>/scripts/run_content_strategy.py --run-dir .video-summary-radar/outputs/content-strategy --range 7d
+python <skill_path>/scripts/run_content_strategy.py --run-dir .video-summary-radar/outputs/创作者名__近7天视频 --range 7d
 ```
 
 它会更新 `digest-manifest.json`，并写出：
@@ -139,3 +139,7 @@ python <skill_path>/scripts/run_content_strategy.py --run-dir .video-summary-rad
 ```bash
 python <skill_path>/scripts/check_environment.py --json
 ```
+
+批次目录优先使用“创作者名或主题__时间范围”等可读名称，用户指定目录时按其指定。新作业在总结旁保存 `口播稿.txt` 与 `处理资料/`，沿用 video-content-digest 的统一五章节规范。重复准备同批次保留既有目录与作业状态；标题更新不会另建目录。报告索引链接视频总结。部分解析不计入完整蒸馏成功样本；缺失的开头钩子、互动和时间线不得推断。历史 content-package.md 及六章节内容包仍可读取。
+
+每份新版视频总结按 video-content-digest 的检索规范填写 title/category/tags/summary 元数据。批量交付完成后从实际使用工作区运行其 `scripts/index_outputs.py`，将批次视频纳入统一产物索引；既有视频检索优先查索引，不扫描媒体和运行环境。
