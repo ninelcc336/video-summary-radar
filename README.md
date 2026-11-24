@@ -18,7 +18,7 @@ npx skills add <github-owner>/video-summary-radar
 
 | Skill | 用途 |
 | --- | --- |
-| `video-content-digest` | 获取视频字幕、口播与必要画面，交付中文摘要、内容还原和转录证据；B站、抖音读取失败时可经 PeanutDL 下载。微信、小红书文案作为后续可选任务。 |
+| `video-content-digest` | 获取视频字幕、口播与必要画面，交付中文摘要、内容还原和转录证据。支持匿名直连下载 B 站与抖音的公开视频。微信、小红书文案作为后续可选任务。 |
 | `creator-intelligence` | 基于可验证的公开数据生成创作者情报、热点分析与选题策略。 |
 
 所有 skill 都以 `SKILL.md` 为跨平台入口。当前不维护各 Agent 的专用适配层或市场插件。

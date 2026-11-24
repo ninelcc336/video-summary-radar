@@ -19,12 +19,12 @@ Prefer factual extraction over creative invention. Keep source evidence separate
 2. For URL inputs, use anonymous retrieval by default, in this evidence order:
    - public metadata and subtitles through unauthenticated HTTP/tools or `yt-dlp --ignore-config`, without cookies, account credentials, or browser-session imports;
    - when page interaction, playback, or visual evidence is needed, use an isolated, unsigned-in browser. Prefer the Codex built-in browser when its session isolation is established; otherwise launch a fresh independent browser context/profile. Follow the browser selection rules in `references/platform-notes.md`;
-   - when anonymous page and public subtitle access cannot sufficiently recover the main content of a Bilibili or Douyin video, use the PeanutDL fallback in the same isolated browser: [Bilibili](https://peanutdl.com/zh/bilibili) or [Douyin](https://peanutdl.com/zh/douyin);
+   - when public subtitles and page evidence cannot recover the main content, run `scripts/download_video.py` for Bilibili or Douyin. Use it directly when the user asks to download a video. It retrieves media from the platform's public player and CDN;
    - use the downloaded or user-provided local video for audio extraction and FunASR transcription when the main content still needs recovery.
    Never connect to the user's everyday Chrome, reuse/import personal cookies or saved auth state, or use a backend that automatically copies their login. This applies to tools such as Agent-Reach/OpenCLI as well as direct browser access; a dedicated browser or read-only command alone does not establish anonymous access. If isolation cannot be established, skip that route and record why. Retrieval failures must not trigger a switch to a personal browser or an automatic login request. A generic login prompt on an otherwise public page allows other anonymous routes; if the content itself requires authorization, request a local file/subtitle export instead. Stop requests to a platform on a CAPTCHA, explicit risk-control block, or rate limit rather than switching browsers/backends to retry it. Do not bypass access controls or perform social actions.
 3. Build an evidence inventory before writing: title/description, subtitles or ASR, chapter summaries, and necessary visual evidence such as slides, code, UI steps, charts, or before/after states. Resolve conflicts with this priority: clear visual original text or clear speech > human subtitles > automatic subtitles or ASR > page chapter summaries. Record unresolved conflicts instead of silently merging them.
 4. Use local transcription only if the evidence inventory cannot recover the main content. Record the actual acquired time spans and gaps. Page metadata or AI chapters alone never establish full speech coverage; do not invent numerical coverage estimates.
-   - For Bilibili and Douyin URLs, try the PeanutDL download fallback before asking the user for a local video; downloading alone does not mean the content has been read. Follow it with audio transcription and necessary visual extraction.
+   - For Bilibili and Douyin URLs, use the local downloader before asking for a local video. If it reports `blocked` or `restricted`, record the cause and stop platform requests. Feed downloaded media to audio transcription and extract any necessary frames.
    - Then check dependencies with `scripts/check_env.py --mode chinese`.
    - The bootstrap prerequisite is Python 3.10 or newer. If Python is missing, explain that the user must install it from the official Python distribution before continuing.
    - The checker is read-only unless `--install` is explicitly provided after user confirmation.
@@ -98,6 +98,14 @@ Identify input:
 python scripts/resolve_video.py "<video-url-or-local-path>"
 ```
 
+Download a public Bilibili or Douyin video from the caller's workspace:
+
+```powershell
+python <skill-path>/scripts/download_video.py "<video-url>"
+```
+
+The downloader uses Python's standard library and the installed `ffmpeg`. Its JSON result includes the local MP4 `path`, source URL, and access method. Pass the path to `extract_audio.py`. Use `--materials "<task-materials-directory>"` for a batch job's designated directory.
+
 Extract audio from a local video:
 
 ```powershell
@@ -131,7 +139,7 @@ yt-dlp --ignore-config --write-info-json --write-auto-subs --write-subs --sub-la
 - Keep the raw or normalized transcript as a local evidence file, but do not make it the default reading experience. The main package must be a semantic reconstruction.
 - If transcript quality is poor, say so briefly in the final output and avoid overconfident claims.
 - For slide, code, chart, UI, or comparison-heavy videos, capture and describe only the visual details required to understand the argument. Attach 3-8 key frames only when text description would lose essential information.
-- If the main content remains unavailable after applicable browser, subtitle, PeanutDL download, and local transcription attempts, return the reliable evidence plus `内容缺口与来源`. State the failed stage and reason, and request only the missing local file, subtitles, visual evidence, or transcription setup. Do not present a title or description as recovered video content.
+- If the main content remains unavailable after applicable subtitle, browser, direct download, and local transcription attempts, return the reliable evidence plus `内容缺口与来源`. State the failed stage and reason, and request only the missing local file, subtitles, visual evidence, or transcription setup. Do not present a title or description as recovered video content.
 
 ## Final Output Rules
 
@@ -174,7 +182,7 @@ python <skill-path>/scripts/normalize_transcript.py "<视频目录>/处理资料
 
 1. 只处理作业 URL，不根据标题搜索替代视频。
 2. 新作业的 `output_path` 为 `digests/视频标题__平台-视频ID/视频总结.md`；在其旁保存 `口播稿.txt` 和 `处理资料/`。以作业给定路径为准；历史 `content-package.md` 路径仍可读取，不擅自重命名已有批次。
-3. 对新目录可用 `prepare_output.py --output-root "<任务目录>/digests"` 建立身份记录；随后使用返回路径，确保与作业目录一致。
+3. 对新目录可用 `prepare_output.py --output-root "<任务目录>/digests"` 建立身份记录。使用 `download_video.py` 时，传入 `--materials "<materials_path>"`，将媒体写入作业的 `处理资料/`。
 4. 取得部分内容可以交付有明确状态的总结；将失败阶段、缺失范围及原因返回上游，不能冒充已成功完整解析。批量索引链接实际存在的交付。
 5. 每份总结包含相同检索元数据，完成后以整个产物根目录重建索引，使批次内的视频也可被统一查到。自定义批次在默认 outputs 外时用其父目录作为 --output-root。批量只返回视频内容与证据，不逐条询问二次创作选项。
 6. 所有采集继续遵守匿名边界，失败不得切换到个人 Chrome、共享登录态或自动导入账号的后端。

@@ -26,12 +26,13 @@ VIDEO_EXTENSIONS = {
 
 
 def classify_url(host: str) -> str:
-    host = host.lower().lstrip("www.")
+    """按主机名识别平台，包括公开分享页和短链。"""
+    host = host.lower().removeprefix("www.")
     if host in {"youtu.be", "youtube.com", "m.youtube.com", "music.youtube.com"} or host.endswith(".youtube.com"):
         return "youtube"
     if host in {"b23.tv", "bilibili.com", "m.bilibili.com"} or host.endswith(".bilibili.com"):
         return "bilibili"
-    if host in {"douyin.com", "iesdouyin.com", "v.douyin.com"} or host.endswith(".douyin.com"):
+    if host in {"douyin.com", "iesdouyin.com"} or host.endswith((".douyin.com", ".iesdouyin.com")):
         return "douyin"
     if host in {"tiktok.com", "vm.tiktok.com"} or host.endswith(".tiktok.com"):
         return "tiktok"
@@ -39,11 +40,12 @@ def classify_url(host: str) -> str:
 
 
 def resolve_video(value: str) -> dict:
+    """识别 URL 或本地输入，并返回供后续流程使用的属性。"""
     parsed = urlparse(value)
     if parsed.scheme in {"http", "https"} and parsed.netloc:
         return {
             "kind": "url",
-            "platform": classify_url(parsed.netloc),
+            "platform": classify_url(parsed.hostname or ""),
             "input": value,
             "host": parsed.netloc,
             "exists": None,
